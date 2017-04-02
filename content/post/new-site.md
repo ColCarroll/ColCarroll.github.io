@@ -1,9 +1,11 @@
 +++
-image = "posts/new_site.jpg"
 date = "2017-01-16T13:11:50-05:00"
 title = "New Site"
 tags = []
 math = false
+summary = "Just migrated my old website to use Hugo"
+
+[header]
 
 +++
 
