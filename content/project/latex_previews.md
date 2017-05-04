@@ -19,7 +19,7 @@ image = ""
 tags = ["javascript"]
 
 # Optional external URL for project (replaces project detail page).
-external_link = "http://colcarroll.github.io/updating_beta"
+external_link = "http://colcarroll.github.io/ngMathJax/"
 
 # Does the project detail page use math formatting?
 math = false
