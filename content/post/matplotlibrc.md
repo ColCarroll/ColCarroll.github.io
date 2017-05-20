@@ -16,4 +16,4 @@ matplotlib.matplotlib_fname()
 then go to the printed file, find the line that says `'macosx'`, and change it to `'Agg'`.
 
 
-Or, as a bash command liner, `python -c 'import matplotlib; print(matplotlib.matplotlib_fname())'`
+Or, as a bash command, `python -c 'import matplotlib; print(matplotlib.matplotlib_fname())'`
