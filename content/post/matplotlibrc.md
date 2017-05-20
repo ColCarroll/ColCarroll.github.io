@@ -1,6 +1,6 @@
 +++
-date = "2017-05-07T22:01:35-04:00"
-draft = true
+date = "2017-05-20T12:01:35-04:00"
+draft = false
 title = "Setting the matplotlib backend"
 highlight = true
 math = false
