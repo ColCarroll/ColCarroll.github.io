@@ -10,6 +10,8 @@ summary = "The last mile in making a package pip installable."
 Caveat!  This is mostly me cargo-culting what worked for me.  The docs suggest using `twine`, which I couldn't get to work.
 
 I'm assuming you've got a nice python package, a working `setup.py`, and are ready to release version 0.1 of `foo` on pypi:
+
+
 0. Register at pypi.python.org and login
 1. Run `python setup.py sdist`, to generate the `foo.egg-info/` directory.  Inside should be `PKG-INFO`.
 2. Run `python setup.py bdist_wheel`, to generate `build/`, which can be ignored, and `dist/`.  Inside `dist/` are the python wheel (`foo-0.1-py2.py3-none-any.whl`) and the source distribution (`foo-0.1.tar.gz`)
