@@ -1,5 +1,5 @@
 +++
-date = "2017-06-18T22:16:15-04:00"
+date = "2017-06-10T22:16:15-04:00"
 draft = false
 title = "Releasing a project on PyPI"
 highlight = true
