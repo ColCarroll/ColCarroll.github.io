@@ -4,6 +4,8 @@ copyright = "&copy; 2017 Colin Carroll"
 theme = "academic"
 enableEmoji = true
 footnotereturnlinkcontents = "<sup>^</sup>"
+ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
+paginate = 10
 
 # Enable comments by entering your Disqus shortname
 disqusShortname = ""
@@ -15,6 +17,10 @@ googleAnalytics = ""
 defaultContentLanguage = "en"
 defaultContentLanguageInSubdir = false
 
+
+[outputs]
+  home = [ "HTML", "CSS" ]
+
 [blackfriday]
   hrefTargetBlank = true
 
@@ -22,9 +28,17 @@ defaultContentLanguageInSubdir = false
   post = "/:year/:month/:day/:slug"
 
 [params]
+  # Color theme.
+  #   Choose from `default`, `ocean`, `forest`, or `coffee`.
+  color_theme = "default"
+
+  # Font style.
+  #   Choose from `default`, `classic`, or `playfair`.
+  font = "default"
+
   name = "Colin Carroll"
   role = "Software Engineer"
-  organization = "Kensho"
+  organizations = [ { name = "MIT Center for Civic Media", url = "https://civic.mit.edu/" } ]
   avatar = "me.jpg"
   email = ">>> \"{user}@{provider}.com\".format(user=colcarroll, provider=gmail)"
 
@@ -34,6 +48,8 @@ defaultContentLanguageInSubdir = false
   # Date format (refer to Go's date format: http://flippinggodateformat.com )
   #   Examples: "Mon, Jan 2, 2006" or "2006-01-02"
   date_format = "Mon, Jan 2, 2006"
+
+  reading_time = false
 
   # Enable global LaTeX math rendering?
   #   If false, you can enable it locally on a per page basis.
@@ -110,6 +126,10 @@ defaultContentLanguageInSubdir = false
   name = "Contact"
   url = "#contact"
   weight = 5
+
+# Taxonomies.
+[taxonomies]
+  tag = "tags"
 
 # Languages
 #   Create a [languages.X] block for each language you want, where X is the language ID.

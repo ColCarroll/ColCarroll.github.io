@@ -25,8 +25,6 @@ view = 1
   name = "All"
   tag = "*"
 
-
-
 [[filter]]
   name = "Machine Learning"
   tag = ".machine-learning"

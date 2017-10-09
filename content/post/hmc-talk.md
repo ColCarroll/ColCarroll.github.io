@@ -1,5 +1,6 @@
 +++
 date = "2017-06-18T22:16:15-04:00"
+tags = []
 draft = false
 title = "Slides from \"Hamiltonian Monte Carlo in PyMC3\""
 highlight = true

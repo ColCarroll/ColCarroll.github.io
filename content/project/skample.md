@@ -3,7 +3,7 @@
 date = 2017-10-09T11:57:49-04:00
 
 # Project title.
-title = "Skample"
+title = "Skample!"
 
 # Project summary to display on homepage.
 summary = "A web app for generating samples from a sketched probability distribution function."

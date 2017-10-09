@@ -4,6 +4,7 @@ draft = false
 title = "Releasing a project on PyPI"
 highlight = true
 math = false
+tags = []
 summary = "The last mile in making a package pip installable."
 +++
 
