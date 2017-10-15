@@ -7,6 +7,11 @@ math = false
 summary = "My setup for running multiple versions of Python"
 tags = []
 +++
+(<em>Note: I am assuming familiarity with `virtualenv` and `conda`, and a general agreement that
+using them are Good Things.  See 
+<a href="https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/" target="blank_">here</a> and 
+<a href="https://jakevdp.github.io/blog/2016/08/25/conda-myths-and-misconceptions/" target="blank_">here</a>, 
+respectively, if you want an introduction, or to be convinced.</em>)
 
 My <a href="https://mediacloud.org/" target="blank_">new day job</a> is on python 3.5.2, 
 <a href="https://github.com/pymc-devs/pymc3" target="blank_">PyMC3</a> runs on 2.7 and 3.6, and 
@@ -15,11 +20,16 @@ supports both `pip` and `conda` installations, and my
 are all over the place, but I think I have a great and simple set up for having sane and explicit
 control of all the versions and dependencies.
 
-The short version for setting all this up is to have bash functions for <b>n</b>ew 
-<b>v</b>irtualenvs (`vn`), <b>a</b>ctivating <b>v</b>irtualenvs (`va`), <b>d</b>eactivating 
-<b>v</b>irtualenvs (`vd`), and <b>dd</b>eleting <b>v</b>irtualenvs (`vdd`), along with 
-<a href="https://github.com/pyenv/pyenv" target="blank_">`pyenv`</a> for handling the version of 
-python I am using, and 
+## The short version
+I want to have bash functions for 
+
+* <b>n</b>ew <b>v</b>irtualenvs (`vn`), 
+* <b>a</b>ctivating <b>v</b>irtualenvs (`va`), 
+* <b>d</b>eactivating <b>v</b>irtualenvs (`vd`), and 
+* <b>dd</b>eleting <b>v</b>irtualenvs (`vdd`),
+
+along with <a href="https://github.com/pyenv/pyenv" target="blank_">`pyenv`</a> for handling the 
+version of python I am using, and 
 <a href="https://github.com/pyenv/pyenv-virtualenv" target="blank_">`pyenv-virtualenv`</a> because
 `pyenv` does not play that well with `conda`.
 
