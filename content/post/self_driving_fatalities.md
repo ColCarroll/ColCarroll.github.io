@@ -123,4 +123,7 @@ change the inference very much.
 
 ------------
 
-*Working code for this post may be found* <a href="https://github.com/ColCarroll/driving_fatalities">*here*</a>
+*Working code for this post may be found* 
+<a href="https://github.com/ColCarroll/driving_fatalities">*here*</a>.  Thanks to Predrag 
+Gruevski for thoughtful comments on a draft, and Timothy Sweetser for putting up with initial
+brainstorming.
