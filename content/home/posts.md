@@ -5,8 +5,8 @@
 date = "2016-04-20T00:00:00"
 draft = false
 
-title = "Recent Posts"
-subtitle = ""
+title = "Blog"
+subtitle = "Short thoughts, sometimes explaining larger projects."
 widget = "posts"
 
 # Order that this section will appear in.
@@ -18,6 +18,6 @@ tags_exclude = []
 tags = []
 
 # Number of posts to list.
-count = 2
+count = 3
 
 +++
