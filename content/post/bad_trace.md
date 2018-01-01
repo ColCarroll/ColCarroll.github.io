@@ -9,6 +9,7 @@ draft = false
 [header]
 
 +++
+<meta name="twitter:image" content="/img/bad_trace_files/bad_trace_14_0.png">
 
 The goal of this post is to scare users away from using Metropolis-Hastings, in favor of the NUTS sampler. I also want to provide a concrete example of a model that fails with a Metropolis sampler. 
 
