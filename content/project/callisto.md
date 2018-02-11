@@ -6,7 +6,7 @@ date = "2017-04-02T16:02:30-04:00"
 title = "Callisto"
 
 # Project summary to display on homepage.
-summary = "A command line utility to create kernels in Jupyter from virtual environments.  Available on [github](https://github.com/ColCarroll/callisto) and [pypi](https://pypi.org/project/callisto/)."
+summary = "A command line utility to create kernels in Jupyter from conda and virtual environments. Available on [github](https://github.com/ColCarroll/callisto) and [pypi](https://pypi.org/project/callisto/)."
 
 # Optional image to display on homepage (relative to `static/img/` folder).
 image_preview = "callisto.jpg"
