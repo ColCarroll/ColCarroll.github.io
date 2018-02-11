@@ -97,7 +97,7 @@ defaultContentLanguageInSubdir = false
   [[params.social]]
     icon = "file-text"
     icon_pack = "fa"
-    link = "//colindcarroll.com/img/resume.pdf"
+    link = "https://www.dropbox.com/s/3e3qyxtaie2au2q/resume.pdf?dl=0"
 
 # Navigation Links
 #   To link a homepage widget, specify the URL as a hash `#` followed by the filename of the
