@@ -1,5 +1,6 @@
 +++
 date = "2014-04-07"
+time_start = 2014-04-07T12:00:00
 math = true
 title = "March Madness Predictions with Python"
 abstract = "Motivated by a 12th place finish in the Kaggle March Madness contest, this talk will discuss how to structure such a project, strategies for exploring the data, and rules of thumb for quickly building and iterating."

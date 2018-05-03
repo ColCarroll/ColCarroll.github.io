@@ -1,5 +1,6 @@
 +++
 date = "2016-05-13"
+time_start = 2016-05-13T12:00:00
 math = true
 title = "Finding and Using Data"
 abstract = "A talk to introduce students to R, and help prepare them to find and use public data sources for their final projects."

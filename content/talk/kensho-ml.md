@@ -1,5 +1,6 @@
 +++
 date = "2016-09-17"
+time_start = 2016-09-17T12:00:00
 math = true
 title = "Build You A Machine Learning"
 abstract = "Introductory talk covering building a linear regression estimator from scratch, and decision boundaries for various classifiers. Prerequisites are a vague memory of linear algebra and calculus."

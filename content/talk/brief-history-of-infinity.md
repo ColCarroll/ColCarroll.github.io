@@ -1,5 +1,6 @@
 +++
 date = "2009-02-10"
+time_start = 2009-02-10T12:00:00
 math = true
 title = "A Brief History of Infinity"
 abstract = "A brief history of infinity, with a focus on sequences and series."

@@ -4,7 +4,7 @@
 date = "2016-04-20"
 draft = false
 
-title = "Past Talks"
+title = "Recent Talks"
 subtitle = ""
 widget = "talks"
 
@@ -12,9 +12,9 @@ widget = "talks"
 weight = 20
 
 # Number of talks to list.
-count = 4
+count = 5
 
 # Show talk details (such as abstract)? (true/false)
-detailed_list = true
+list_format = 1
 
 +++
