@@ -8,7 +8,7 @@ summary = "`python -c 'import matplotlib; print(matplotlib.matplotlib_fname())'`
 tags = []
 +++
 
-Running matplotlib on OS X, occasionally there will be a cryptic error about installing as a framework.  See [here](https://matplotlib.org/faq/osx_framework.html) for a more precise discussion.  The fix I typically use, and which is hard to find (on [this](http://matplotlib.org/users/customizing.html) page) is to run
+Running matplotlib on OS X, occasionally there will be a cryptic error about installing as a framework.  See [here](https://matplotlib.org/faq/osx_framework.html) for a more precise discussion.  The fix I typically use, and which is hard to find (on [this](https://matplotlib.org/users/customizing.html) page) is to run
 ```python
 import matplotlib
 matplotlib.matplotlib_fname()

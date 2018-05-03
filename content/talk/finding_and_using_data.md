@@ -10,8 +10,8 @@ event_url = ""
 location = "Andover, MA"
 selected = false
 url_pdf = ""
-url_slides = ""
+url_slides = "https://colcarroll.github.io/phillips_data_talk"
 url_video = ""
 +++
 
-{{< iframe "http://colcarroll.github.io/phillips_data_talk" >}}
+{{< iframe "https://colcarroll.github.io/phillips_data_talk" >}}

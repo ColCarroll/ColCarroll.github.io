@@ -11,7 +11,7 @@ draft = false
 +++
 <meta name="twitter:image" content="/img/bad_trace_files/bad_trace_14_0.png">
 
-The goal of this post is to scare users away from using Metropolis-Hastings, in favor of the NUTS sampler. I also want to provide a concrete example of a model that fails with a Metropolis sampler. 
+The goal of this post is to scare users away from using Metropolis-Hastings, in favor of the NUTS sampler. I also want to provide a concrete example of a model that fails with a Metropolis sampler.
 
 I am using the model from a [previous post](https://colindcarroll.com/2017/12/07/does-this-convince-you-that-self-driving-cars-are-safe/).  The details are interesting, but not that important, except that this is a hierarchical model. We will also just concentrate on two of the values from the model.
 
@@ -96,7 +96,7 @@ pm.traceplot(metropolis_trace, varnames=varnames);
 
 # Using statistical tests
 
-In case we are not convinced yet that the NUTS trace did a great job of sampling, while the Metropolis one would give us wildly incorrect results, we can use the [_Gelman Rubin statistic_](http://docs.pymc.io/api/diagnostics.html#pymc3.diagnostics.gelman_rubin), which compares between chain variance with inter chain variance. Intuitively, if each chain looks like each other chain, then it might have been a good draw, so _the Gelman-Rubin statistic should be near 1_.  Here's a bar plot of the state rate for the `NUTS` trace, and for the `Metropolis` trace.
+In case we are not convinced yet that the NUTS trace did a great job of sampling, while the Metropolis one would give us wildly incorrect results, we can use the [_Gelman Rubin statistic_](https://docs.pymc.io/api/diagnostics.html#pymc3.diagnostics.gelman_rubin), which compares between chain variance with inter chain variance. Intuitively, if each chain looks like each other chain, then it might have been a good draw, so _the Gelman-Rubin statistic should be near 1_.  Here's a bar plot of the state rate for the `NUTS` trace, and for the `Metropolis` trace.
 
 The NUTS plot is, in the words of Abraham Simpson, like "[a haircut you could set a watch to](https://www.youtube.com/watch?v=Ls8376jnLtI)".  The Metropolis trace is, conversely, [an apogee of sculpted sartorium](https://frinkiac.com/video/S07E08/0LpZ78EEpIYJKElB44OZ2qnvZG4=.gif), all over the place, and often nowhere close to 1.
 
@@ -115,7 +115,7 @@ fig.set_size_inches(18.5, 10.5)
 {{< figure src="/img/bad_trace_files/bad_trace_18_0.png" caption="The Gelman-Rubin satistic for the state rates on the top (NUTS trace) are all near 1, which is good. On the bottom they are often far from 1, indicating that the Metropolis traces had not yet converged." >}}
 
 
-Finally, there is a nice "compare" function to compare how two models have fit.  [This is meant for more subtle work](http://docs.pymc.io/notebooks/model_comparison.html) than this, but a lower WAIC is, roughly, better.  The first row here is the trace from the NUTS model.
+Finally, there is a nice "compare" function to compare how two models have fit.  [This is meant for more subtle work](https://docs.pymc.io/notebooks/model_comparison.html) than this, but a lower WAIC is, roughly, better.  The first row here is the trace from the NUTS model.
 
 
 ```python

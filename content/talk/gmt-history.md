@@ -9,9 +9,9 @@ event = "Trinity College Undergraduate Math Seminar"
 event_url = ""
 location = "San Antonio, TX"
 selected = false
-url_pdf = "http://colindcarroll.com/presentations/gmt.pdf"
+url_pdf = "https://colindcarroll.com/presentations/gmt.pdf"
 url_slides = ""
 url_video = ""
 +++
 
-{{< iframe "http://colindcarroll.com/presentations/gmt.pdf" >}}
+{{< iframe "https://colindcarroll.com/presentations/gmt.pdf" >}}

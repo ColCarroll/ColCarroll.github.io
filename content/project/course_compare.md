@@ -19,7 +19,7 @@ image = ""
 tags = ["javascript", "machine-learning", "running"]
 
 # Optional external URL for project (replaces project detail page).
-external_link = "http://coursecompare.colindcarroll.com"
+external_link = "https://coursecompare.colindcarroll.com"
 
 # Does the project detail page use math formatting?
 math = false

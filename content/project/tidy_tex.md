@@ -19,7 +19,7 @@ image = ""
 tags = ["python"]
 
 # Optional external URL for project (replaces project detail page).
-external_link = "http://colcarroll.github.io/updating_beta"
+external_link = "https://colcarroll.github.io/updating_beta"
 
 # Does the project detail page use math formatting?
 math = true

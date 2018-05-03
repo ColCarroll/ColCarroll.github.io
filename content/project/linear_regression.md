@@ -19,7 +19,7 @@ image = ""
 tags = ["javascript", "python", "machine-learning"]
 
 # Optional external URL for project (replaces project detail page).
-external_link = "http://regressiondemo.colindcarroll.com"
+external_link = "https://regressiondemo.colindcarroll.com"
 
 # Does the project detail page use math formatting?
 math = false

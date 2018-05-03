@@ -10,8 +10,8 @@ event_url = ""
 location = "Austin, TX"
 selected = false
 url_pdf = ""
-url_slides = ""
+url_slides = "https://colindcarroll.com/presentations/march_madness/index.html"
 url_video = ""
 +++
 
-{{< iframe "http://colindcarroll.com/presentations/march_madness/index.html" >}}
+{{< iframe "https://colindcarroll.com/presentations/march_madness/index.html" >}}

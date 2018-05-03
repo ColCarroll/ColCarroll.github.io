@@ -9,9 +9,9 @@ event = "Rice University Teaching Seminar"
 event_url = ""
 location = "Houston, TX"
 selected = false
-url_pdf = "http://colindcarroll.com/presentations/infinity_talk.pdf"
+url_pdf = "https://colindcarroll.com/presentations/infinity_talk.pdf"
 url_slides = ""
 url_video = ""
 +++
 
-{{< iframe "http://colindcarroll.com/presentations/infinity_talk.pdf" >}}
+{{< iframe "https://colindcarroll.com/presentations/infinity_talk.pdf" >}}

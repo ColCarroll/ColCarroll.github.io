@@ -11,7 +11,7 @@ summary = "A command line utility to create kernels in Jupyter from virtual envi
 
 # Callisto
 
-Inspired by some personal frustrations around doing reproducible programming inside a [Jupyter](http://jupyter.org/) notebook, I built a small command line utility to easily create and delete kernels using virtual environments.  
+Inspired by some personal frustrations around doing reproducible programming inside a [Jupyter](https://jupyter.org/) notebook, I built a small command line utility to easily create and delete kernels using virtual environments.
 
 Using this you can work on building a good, reusable project, manage dependencies with a virtualenv, but use that code in a Jupyter notebook.
 

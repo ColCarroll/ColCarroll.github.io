@@ -9,6 +9,7 @@ event = "Rice University Geometry-Analysis Seminar"
 event_url = ""
 location = "Houston, TX"
 selected = false
+url_slides = "https://bayesianregtalk.colindcarroll.com/#/"
 +++
 
-{{< iframe "http://bayesianregtalk.colindcarroll.com/#/" >}}
+{{< iframe "https://bayesianregtalk.colindcarroll.com/#/" >}}

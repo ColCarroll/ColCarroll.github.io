@@ -30,6 +30,6 @@ weight = 30
 
 # About Me
 
-I am a software engineer and mathematician in Cambridge, MA, working on machine learning and natural language processing. I am a contributor to the popular [PyMC3](https://github.com/pymc-devs/pymc3) library. I received my doctorate studying [geometric measure theory](https://en.wikipedia.org/wiki/Geometric_measure_theory) with [Dr. Robert Hardt](http://math.rice.edu/~hardt/) at Rice University.
+I am a software engineer and mathematician in Cambridge, MA, working on machine learning and natural language processing. I am a contributor to the popular [PyMC3](https://github.com/pymc-devs/pymc3) library. I received my doctorate studying [geometric measure theory](https://en.wikipedia.org/wiki/Geometric_measure_theory) with [Dr. Robert Hardt](https://math.rice.edu/~hardt/) at Rice University.
 
-In my spare time [I run](https://www.strava.com/athletes/1254248), walk in the woods with [Pete the pup](http://i.giphy.com/wCY3Zy36OHpwk.gif), and [launch balloons into [near] space](http://giant.gfycat.com/TenseSkinnyIndianrhinoceros.gif).
+In my spare time [I run](https://www.strava.com/athletes/1254248), walk in the woods with [Pete the pup](https://i.giphy.com/wCY3Zy36OHpwk.gif), and [launch balloons into [near] space](https://giant.gfycat.com/TenseSkinnyIndianrhinoceros.gif).
