@@ -1,6 +1,6 @@
 baseurl = "https://colindcarroll.com/"
 title = "Colin Carroll"
-copyright = "&copy; 2017 Colin Carroll"
+copyright = "&copy; 2018 Colin Carroll"
 theme = "academic"
 enableEmoji = true
 footnotereturnlinkcontents = "<sup>^</sup>"
