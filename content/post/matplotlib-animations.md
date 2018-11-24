@@ -12,6 +12,7 @@ draft = false
 
 # Animated MCMC with Matplotlib
 
+This blog was generated from [a working notebook that is available here](https://gist.github.com/ColCarroll/f6985375d3029c0651a4f41e83f99499).
 
 ## 1. Write down an interesting distribution
 
