@@ -3,7 +3,7 @@ date = "2019-01-29T05:33:57-04:00"
 title = "Notes on differential geometry"
 tags = []
 math = true
-summary = "TensorFlow-2.0 and matplotlib applied to do Carmo"
+summary = "TensorFlow-2.0 and matplotlib applied to do Carmo's _Riemannian Geometry_"
 draft = false
 
 [header]
