@@ -10,7 +10,7 @@ draft = false
 
 +++
 
-_These notes are available as a [colaboratory notebook](https://colab.research.google.com/drive/1tjGfOsEQQtQEzSE9k5-pvDAJb4CE0YyK#scrollTo=W3XmccUzFeUS), and this post has edited out some of the matplotlib code for readability, while retaining the TensorFlow 2.0 code for novelty._
+_This pageg is available as a [colaboratory notebook](https://colab.research.google.com/drive/1tjGfOsEQQtQEzSE9k5-pvDAJb4CE0YyK#scrollTo=W3XmccUzFeUS), and this post has edited out some of the matplotlib code for readability, while retaining the TensorFlow 2.0 code for novelty._
 
 These are notes from a PyMC journal club on January 18, 2019, in preparation for reading Michael Betancourt's new article on [A Geometric Theory of Higher-Order Automatic Differentiation](https://arxiv.org/abs/1812.11592), which makes extensive use of differential geometry. These notes are essentially an elaboration of chapter 0, section 1-3 in Manfredo do Carmo's _Riemannian Geometry_.
 
