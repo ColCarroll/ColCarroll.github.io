@@ -18,6 +18,7 @@ This is a short note on how to use an automatic differentiation library, startin
 I am using [autograd](https://github.com/HIPS/autograd) here, though these experiments were originally done using [jax](https://github.com/google/jax), which adds [XLA](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/xla/g3doc/overview.md) support, so everything can run on the GPU. It is strikingly easy to move from `autograd` to `jax`, but the random number generation is _just_ weird enough that the following is run with autograd. I have included the equivalent `jax` code for everyting, though
 
 Automatic differentiation has found intense application in deep learning, but my interest is in probabilistic programming, and gradient-based Markov chain Monte Carlo in particular. There are a number of probabilistic programming libraries built on top of popular deep learning libraries, reaping the benefits of efficient gradients and computation:
+
 - [PyMC3](https://pymc.io/) uses [Theano](https://github.com/theano/theano),
 - [Pyro](http://pyro.ai/) uses [PyTorch](https://pytorch.org/), and
 - [Edward2](https://www.tensorflow.org/probability/api_docs/python/tfp/edward2) uses [Tensorflow](https://www.tensorflow.org/probability/).
