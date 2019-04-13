@@ -1,4 +1,3 @@
-
 +++
 date = "2019-04-06T11:33:57-04:00"
 title = "Exercises in automatic differentiation using autograd and jax"
