@@ -10,6 +10,10 @@ draft = false
 
 +++
 
+_This is the second post in a series exploring implementing gradient based samplers in practice. The first post is [here](https://colindcarroll.com/2019/04/06/exercises-in-automatic-differentiation-using-autograd-and-jax/). A well tested, documented library containing all of this code is available [here](https://github.com/ColCarroll/minimc). Pull requests and issues are welcome._
+
+_The notebook that generated this blog post can be found [here](https://gist.github.com/ColCarroll/601700fd24a6c3299d533eec92b8d171)._
+
 Markov chain Monte Carlo (MCMC) is a method used for sampling from posterior distributions. Hamiltonian Monte Carlo (HMC) is a variant that uses gradient information to scale better to higher dimensions, and which is used by software like [PyMC3](https://pymc.io/) and [Stan](https://mc-stan.org/). Some great references on MCMC in general and HMC in particular are
 
 - **Christopher Bishop's "[Pattern Recognition and Machine Learning](https://www.microsoft.com/en-us/research/people/cmbishop/#!prml-book)"** A classic machine learning textbook, and gives a good overview of motivating sampling, as well as a number of different sampling strategies.
