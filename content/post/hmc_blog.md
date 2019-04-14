@@ -83,8 +83,8 @@ $$
 where $K(\mathbf{p}, \mathbf{q})$ is called the _kinetic energy_, and $V(\mathbf{q})$ is called the _potential energy_, using an analogy to physical systems.
 4. We evolve the system $(\mathbf{q}, \mathbf{p})$ according to _Hamilton's equations_:
 $$
-\frac{d \mathbf{q}}{dt} = \frac{\partial H}{\partial \mathbf{p}} = \frac{\partial K}{\partial \mathbf{p}} + \frac{\partial V}{\partial \mathbf{p}}\\
-\frac{d \mathbf{p}}{dt} = -\frac{\partial H}{\partial \mathbf{q}}= -\frac{\partial K}{\partial \mathbf{q}} + \frac{\partial V}{\partial \mathbf{q}}
+\frac{d \mathbf{q}}{dt} = \frac{\partial H}{\partial \mathbf{p}} = \frac{\partial K}{\partial \mathbf{p}} + \frac{\partial V}{\partial \mathbf{p}}\\\\\\
+\frac{d \mathbf{p}}{dt} = -\frac{\partial H}{\partial \mathbf{q}}= -\frac{\partial K}{\partial \mathbf{q}} - \frac{\partial V}{\partial \mathbf{q}}
 $$
 Note that $\frac{\partial V}{\partial \mathbf{p}} = \mathbf{0}$.
 
@@ -108,7 +108,7 @@ $$
 We can then simplify Hamilton's equations to:
 
 $$
-\frac{d \mathbf{q}}{dt}  = \mathbf{p} \\
+\frac{d \mathbf{q}}{dt}  = \mathbf{p} \\\\\\
 \frac{d \mathbf{p}}{dt} = - \frac{\partial V}{\partial \mathbf{q}}
 $$
 
