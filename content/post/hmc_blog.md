@@ -121,7 +121,7 @@ This is the algorithm, then:
 
 This is a small function. A few things to notice in particular:
 
-- We need to compute $\frac{\partial V}{\partial \mathbf{q}}$, and do so using autodiff. See [my previous post on autodiff libraries](https://colindcarroll.com/2019/04/06/exercises-in-automatic-differentiation-using-autograd-and-jax/). The `negative_log_prob` argument nust be defined using `autograd`.
+- We need to compute $\frac{\partial V}{\partial \mathbf{q}}$, and do so using autodiff. See [my previous post on autodiff libraries](https://colindcarroll.com/2019/04/06/exercises-in-automatic-differentiation-using-autograd-and-jax/). The `negative_log_prob` argument must be defined using `autograd`.
 - We still need to define the function `leapfrog`, which is below.
 - There is a [Metropolis acceptance](https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm#Formal_derivation) dance at the bottom. This corrects for errors introduced by the `leapfrog` integrator. I had a bug in this implementation that was hard to spot: we are sampling from $\pi(\mathbf{q}, \mathbf{p})$ here, not $\pi(\mathbf{q})$, so the momentum at the end of the trajectory needs to be returned by the leapfrog function, too.
 
