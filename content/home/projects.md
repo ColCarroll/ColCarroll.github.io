@@ -26,6 +26,10 @@ view = 1
   tag = "*"
 
 [[filter]]
+  name = "Visualization"
+  tag = ".visualization"
+
+[[filter]]
   name = "Machine Learning"
   tag = ".machine-learning"
 

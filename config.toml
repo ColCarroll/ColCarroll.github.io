@@ -38,8 +38,10 @@ defaultContentLanguageInSubdir = false
   font = "default"
 
   name = "Colin Carroll"
-  role = "Data Scientist"
-  organizations = [ { name = "Freebird", url = "https://www.getfreebird.com/" } ]
+  role = "Machine learning engineer"
+  organizations = [
+    #{ name = "Freebird", url = "https://www.getfreebird.com/" }
+    ]
   avatar = "me.jpg"
   email = ">>> \"{user}@{provider}.com\".format(user=colcarroll, provider=gmail)"
 

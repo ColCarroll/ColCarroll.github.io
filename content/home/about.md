@@ -13,6 +13,7 @@ weight = 30
 [interests]
   interests = [
     "Bayesian Machine Learning",
+    "Data Visualization",
     "Natural Language Processing"
   ]
 
@@ -30,6 +31,8 @@ weight = 30
 
 # About Me
 
-I am a software engineer and mathematician in Cambridge, MA, working on machine learning and natural language processing. I am a contributor to the popular [PyMC3](https://github.com/pymc-devs/pymc3) library. I received my doctorate studying [geometric measure theory](https://en.wikipedia.org/wiki/Geometric_measure_theory) with [Dr. Robert Hardt](https://math.rice.edu/~hardt/) at Rice University.
+I am a machine learning researcher and software engineer in Cambridge, MA. Work in the past has involved [modelling risk in the airline industry](https://getfreebird.com), [collecting and organizing all the news](https://mediacloud.org/), and building [NLP-powered search infrastructure for finance](https://www.kensho.com).
+
+I also spend a fair amount of time contributing to open source, particularly the popular [PyMC3](https://docs.pymc.io/) and [ArviZ](https://arviz-devs.github.io/arviz) libraries. In my academic life, I studied [geometric measure theory](https://en.wikipedia.org/wiki/Geometric_measure_theory) with [Dr. Robert Hardt](https://math.rice.edu/~hardt/) at Rice University.
 
 In my spare time [I run](https://www.strava.com/athletes/1254248), walk in the woods with [Pete the pup](https://i.giphy.com/wCY3Zy36OHpwk.gif), and [launch balloons into [near] space](https://giant.gfycat.com/TenseSkinnyIndianrhinoceros.gif).

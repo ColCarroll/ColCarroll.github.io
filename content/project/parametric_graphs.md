@@ -16,7 +16,7 @@ image = ""
 
 # Tags: can be used for filtering projects.
 # Example: `tags = ["machine-learning", "deep-learning"]`
-tags = ["javascript"]
+tags = ["javascript", "visualization"]
 
 # Optional external URL for project (replaces project detail page).
 external_link = "https://colcarroll.github.io/parametric_graphs"
