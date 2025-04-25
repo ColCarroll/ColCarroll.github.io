@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Why I'm Excited about PyMC3 v3.5</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Why I'm Excited about PyMC3 v3.5</h1>
+            <p class="date">20 July, 2018</p>
+        </section>
+    </header>
+    <main>
+        <section>
+            <p><em>See PyMC3 on GitHub <a href="https://github.com/pymc-devs/pymc3/" target="_blank">here</a>, the docs <a href="https://docs.pymc.io/" target="_blank">here</a>, and the release notes <a href="https://github.com/pymc-devs/pymc3/blob/master/RELEASE-NOTES.md" target="_blank">here</a></em>. This post is available as a notebook <a href="https://gist.github.com/ColCarroll/2856fe0750d92a65d602762171960281" target="_blank">here</a>.</p>
+
+            <p>I think there are a few great usability features in this new release that will help a lot with building, checking, and thinking about models. To give an introduction, I am going to to a bad job of implementing <a href="http://andrewgelman.com/2014/01/21/everything-need-know-bayesian-statistics-learned-eight-schools/" target="_blank">the &ldquo;eight schools&rdquo; model</a>, and show how these new features help debug the model. I am using this particular model as one that is complicated enough to be interesting, but not <em>too</em> complicated.</p>
+        </section>
+
+        <section>
+            <h2 id="1-checking-model-initialization">1. Checking model initialization</h2>
+
+            <p>This implementation has two different mistakes in it that we will find. First, the method <code>Model.check_test_point</code> is helpful to see if you have accidentally defined a model with 0 probability or with bad parameters:</p>
+
+            <pre><code class="language-python">J = 8
+y = np.array([28.,  8., -3.,  7., -1.,  1., 18., 12.])
+sigma = np.array([15., 10., 16., 11.,  9., 11., 10., 18.])
+
+with pm.Model() as non_centered_eight:
+    mu = pm.Normal('mu', mu=0, sd=5)
+    tau = pm.HalfCauchy('tau', beta=5, shape=J)
+    theta_tilde = pm.Normal('theta_t', mu=0, sd=1, shape=J)
+    theta = pm.Deterministic('theta', mu + tau * theta_tilde)
+    obs = pm.Normal('obs', mu=theta, sd=-sigma, observed=y)
+
+non_centered_eight.check_test_point()
+</code></pre>
+
+            <pre><code>mu          -2.530000
+tau_log__   -9.160000
+theta_t     -7.350000
+obs              -inf
+Name: Log-probability of test_point, dtype: float64
+</code></pre>
+
+            <p>Now that I see that <code>obs</code> has <code>-inf</code> log probability, I notice that I set the standard deviation to a negative number! <em>quelle horreur!</em> Let&rsquo;s fix that and see if we can find other mistakes.</p>
+
+            <pre><code class="language-python">with pm.Model() as non_centered_eight:
+    mu = pm.Normal('mu', mu=0, sd=5)
+    tau = pm.HalfCauchy('tau', beta=5, shape=J)
+    theta_tilde = pm.Normal('theta_t', mu=0, sd=1, shape=J)
+    theta = pm.Deterministic('theta', mu + tau * theta_tilde)
+    obs = pm.Normal('obs', mu=theta, sd=sigma, observed=y)
+
+non_centered_eight.check_test_point()
+</code></pre>
+
+            <pre><code>mu           -2.53
+tau_log__    -9.16
+theta_t      -7.35
+obs         -31.46
+Name: Log-probability of test_point, dtype: float64
+</code></pre>
+
+            <p>Everything looks ok now at the test point, at least!</p>
+        </section>
+
+        <section>
+            <h2 id="2-model-graphs">2. Model Graphs</h2>
+
+            <p>It takes an optional install (<code>conda install -c conda-forge python-graphviz</code>), but you can visualize your models in <a href="https://en.wikipedia.org/wiki/Plate_notation" target="_blank">plate notation</a>. This can be useful for sharing your model, or just checking that you implemented the right one.</p>
+
+            <pre><code class="language-python">pm.model_to_graphviz(non_centered_eight)
+</code></pre>
+
+            <p><img src="/img/first_graph.png" alt="first_graph" /></p>
+
+            <p>Oops! I meant for both <code>mu</code> and <code>tau</code> to be shared priors among the eight groups, but left an extra <code>shape=J</code> argument in there.</p>
+
+            <pre><code class="language-python">with pm.Model() as non_centered_eight:
+    mu = pm.Normal('mu', mu=0, sd=5)
+    tau = pm.HalfCauchy('tau', beta=5)
+    theta_tilde = pm.Normal('theta_t', mu=0, sd=1, shape=J)
+    theta = pm.Deterministic('theta', mu + tau * theta_tilde)
+    obs = pm.Normal('obs', mu=theta, sd=sigma, observed=y)
+
+pm.model_to_graphviz(non_centered_eight)
+</code></pre>
+
+            <p><img src="/img/second_graph.png" alt="second graph" /></p>
+
+        </section>
+
+        <section>
+            <h2 id="3-sampling-from-the-prior">3. Sampling from the prior</h2>
+
+            <p>We can sample from the prior in the <em>absence</em> of data. This might seem like a small thing, but required a lot of refactoring along the way. Previously, this would be done by copy/pasting the model, deleting the <code>observed</code> arguments, and using MCMC. Now it can be done in the same model context, and is vectorized, running thousands of times faster. I am excited to see what <a href="http://arviz-devs.github.io/arviz/" target="_blank">tools and visualizations</a> can be built around this, but in the meantime we can see how the presence of data effects our prior beliefs for the hierarchical mean here.</p>
+
+            <pre><code class="language-python">with non_centered_eight:
+    prior = pm.sample_prior_predictive(5000)
+    posterior = pm.sample()
+</code></pre>
+
+            <pre><code>Auto-assigning NUTS sampler...
+Initializing NUTS using jitter+adapt_diag...
+Multiprocess sampling (4 chains in 4 jobs)
+NUTS: [theta_t, tau, mu]
+Sampling 4 chains: 100%|██████████| 4000/4000 [00:02&lt;00:00, 1897.82draws/s]
+</code></pre>
+
+            <pre><code class="language-python">sns.distplot(prior['mu'], label='Prior', hist=False)
+ax = sns.distplot(posterior['mu'], label='Posterior', hist=False)
+ax.legend()
+</code></pre>
+
+            <p><img src="/img/pymc3_3.5.0_13_0.png" alt="png" /></p>
+
+        </section>
+
+        <section>
+            <h2 id="4-nifty-new-progress-bar">4. Nifty new progress bar</h2>
+
+            <p>Check out also the progressbar above, which now shows you the <em>total</em> number of draws the sampler is doing, instead of just the first chain&rsquo;s progress. The progressbar is actually the visible part of a change in multiprocessing. It removes (on OSX and Linux) the use of <code>pickle</code> to pass models around for multiprocessing, so you could use <code>lambda</code> in your models again if you really wanted.</p>
+        </section>
+
+        <section>
+            <h2 id="5-ordered-transformation">5. Ordered transformation</h2>
+
+            <p>There&rsquo;s a new <code>ordered</code> transform which is handy for sampling from, for example, 1-d mixture models. I&rsquo;ll quickly generate a mixture model and use some of the tricks above to fit it.</p>
+
+            <pre><code class="language-python"># Generate data
+N_SAMPLES = 100
+μ_true = np.array([-2, 0, 2])
+σ_true = np.ones_like(μ_true)
+z_true = np.random.randint(len(μ_true), size=N_SAMPLES)
+y = np.random.normal(μ_true[z_true], σ_true[z_true])
+
+with pm.Model() as mixture:
+    μ = pm.Normal('μ', mu=0, sd=10, shape=3)
+    z = pm.Categorical('z', p=np.ones(3)/3, shape=len(y))
+    y_obs = pm.Normal('y_obs', mu=μ[z], sd=1., observed=y)
+</code></pre>
+
+            <pre><code class="language-python">mixture.check_test_point()
+</code></pre>
+
+            <pre><code>μ         -9.66
+z       -109.86
+y_obs   -292.47
+Name: Log-probability of test_point, dtype: float64
+</code></pre>
+
+            <pre><code class="language-python">pm.model_to_graphviz(mixture)
+</code></pre>
+
+            <p><img src="/img/third_graph.png" alt="third graph" /></p>
+
+            <pre><code class="language-python">with mixture:
+    posterior = pm.sample()
+</code></pre>
+
+            <pre><code>Multiprocess sampling (4 chains in 4 jobs)
+CompoundStep
+&gt;NUTS: [μ]
+&gt;CategoricalGibbsMetropolis: [z]
+Sampling 4 chains: 100%|██████████| 4000/4000 [00:09&lt;00:00, 405.95draws/s]
+The acceptance probability does not match the target. It is 0.4428216460380929, but should be close to 0.8. Try to increase the number of tuning steps.
+The gelman-rubin statistic is larger than 1.4 for some parameters. The sampler did not converge.
+The estimated number of effective samples is smaller than 200 for some parameters.
+</code></pre>
+
+            <pre><code class="language-python">pm.traceplot(posterior, varnames=['μ'], combined=True)
+</code></pre>
+
+            <p><img src="/img/pymc3_3.5.0_19_0.png" alt="png" /></p>
+
+            <p>Notice the chains &ldquo;jumping&rdquo; between modes. This phenomena is called <a href="https://stats.stackexchange.com/questions/152/is-there-a-standard-method-to-deal-with-label-switching-problem-in-mcmc-estimati" target="_blank">label switching</a>. We can handle it with the <code>ordered</code> transform.</p>
+
+            <pre><code class="language-python">import pymc3.distributions.transforms as tr
+
+with pm.Model() as mixture:
+    μ = pm.Normal('μ', mu=0, sd=10, shape=3,
+                  transform=tr.ordered,
+                  testval=np.array([-1, 0, 1]))  # the `ordered` transform needs an initialization
+                                                 # that is also ordered! PRs welcome!
+    z = pm.Categorical('z', p=np.ones(3) / 3, shape=len(y))
+    y_obs = pm.Normal('y_obs', mu=μ[z], sd=1., observed=y)
+    posterior = pm.sample()
+</code></pre>
+
+            <pre><code>Multiprocess sampling (4 chains in 4 jobs)
+CompoundStep
+&gt;NUTS: [μ]
+&gt;CategoricalGibbsMetropolis: [z]
+Sampling 4 chains: 100%|██████████| 4000/4000 [00:15&lt;00:00, 251.06draws/s]
+The estimated number of effective samples is smaller than 200 for some parameters.
+</code></pre>
+
+            <pre><code class="language-python">pm.traceplot(posterior, varnames=['μ'], combined=True)
+</code></pre>
+
+            <p><img src="/img/pymc3_3.5.0_22_0.png" alt="png" /></p>
+
+            <p>Look! No label switching! How cool!</p>
+
+        </section>
+    </main>
+    <footer>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

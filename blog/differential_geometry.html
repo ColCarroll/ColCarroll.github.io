@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Notes on Differential Geometry</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Notes on Differential Geometry</h1>
+            <p class="date">29 January, 2019</p>
+        </section>
+    </header>
+
+    <main>
+        <section>
+            <p><em>This page is available as a <a href="https://colab.research.google.com/drive/1tjGfOsEQQtQEzSE9k5-pvDAJb4CE0YyK#scrollTo=W3XmccUzFeUS" target="_blank">colaboratory notebook</a>, and this post has edited out some of the matplotlib code for readability, while retaining the TensorFlow 2.0 code for novelty.</em></p>
+
+            <p>These are notes from a PyMC journal club on January 18, 2019, in preparation for reading Michael Betancourt&rsquo;s new article on <a href="https://arxiv.org/abs/1812.11592" target="_blank">A Geometric Theory of Higher-Order Automatic Differentiation</a>, which makes extensive use of differential geometry. These notes are essentially an elaboration of chapter 0, section 1-3 in Manfredo do Carmo&rsquo;s <em>Riemannian Geometry</em>.</p>
+
+            <p>This is pretty long! Your best bet might be to get the book, read through the first ~10 pages, then refer to this notebook. You might also view the notebook as an example of using TensorFlow 2.0, and some matplotlib functions - I learned about <code>plt.quiver</code> and that the 3d plotting is pretty easy now.</p>
+        </section>
+
+        <section>
+            <h2 id="big-picture">Big Picture</h2>
+
+            <ul>
+                <li>We can calculate derivatives of functions from \(\mathbb{R}^n \rightarrow \mathbb{R}^m\), using calculus</li>
+                <li>If we have a real-valued function on some set with nice properties (a <em>smooth manifold</em>), we can still do a lot of calculus</li>
+                <li>We do our calculations using a parameterization, and are interested in what happens when we change that parameterization</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3 id="function-composition">Function composition</h3>
+
+            <p>A lot of what we will do is &ldquo;pushing&rdquo; functions, also called function composition. That is, if \(f : A \rightarrow B\) and \(g: B \rightarrow C\), then \(g \circ f : A \rightarrow C\).</p>
+
+            <p>I try to provide working code examples for a lot of the concepts. For an example of function composition, consider:</p>
+
+            <pre><code class="language-python">def powers(t):
+    &quot;&quot;&quot;Function from R -&gt; R^4&quot;&quot;&quot;
+    return [t ** j for j in range(4)]
+
+def my_sum(*elements):
+    &quot;&quot;&quot;Function from R^n -&gt; R&quot;&quot;&quot;
+    return sum(elements)
+
+def composition(t):
+    &quot;&quot;&quot;Function from R -&gt; R&quot;&quot;&quot;
+    return my_sum(*powers(t))
+
+print(powers(2))
+print(my_sum(*powers(2)))
+print(composition(2))
+</code></pre>
+
+            <pre><code>[1, 2, 4, 8]
+15
+15
+</code></pre>
+        </section>
+
+        <section>
+            <h2 id="review-of-calculus">Review of calculus</h2>
+
+            <p>We start by remembering derivatives and gradients from calculus, <em>and</em> showing how to perform and visualize these calculations using TensorFlow and matplotlib. We are limited to 3 dimensions for visualization, so we will look at functions</p>
+
+            <ul>
+                <li>\(\mathbb{R} \rightarrow \mathbb{R}\)</li>
+                <li>\(\mathbb{R} \rightarrow \mathbb{R}^2\)</li>
+            </ul>
+
+            <p>and consider what gradients mean in each of these places.</p>
+
+        </section>
+
+        <section>
+            <h3 id="functions-mathbb-r-rightarrow-mathbb-r">Functions \(\mathbb{R} \rightarrow \mathbb{R}\)</h3>
+
+            <p>These are usually covered in single variable calculus, and allow you to miss some of the &ldquo;vector&rdquo;-y stuff that happens in higher dimensions. In particular, I will plot the derivative as a bunch of tangent arrows on the function, rather than as a separate graph, to emphasize that the gradient is a vector at a point.</p>
+
+            <pre><code class="language-python">t = tf.linspace(-2 * np.pi, 2  * np.pi, 100)
+
+with tf.GradientTape() as g:
+    g.watch(t)
+    f = tf.cos(t)
+grad = g.gradient(f, t)
+</code></pre>
+
+            <p><img src="/img/differential_geometry_7_0.png" alt="png" /></p>
+
+            <p>Notice that the gradient is the derivative, and is a function from \(\mathbb{R} \rightarrow \mathbb{R}\), \((\cos)`(t) = -\sin t\).</p>
+
+            <h3 id="functions-mathbb-r-rightarrow-mathbb-r-2">Functions \(\mathbb{R} \rightarrow \mathbb{R}^2\)</h3>
+
+            <p>These are parametric curves,
+                $$
+                f(t) = (x(t), y(t))
+                $$
+                and now our gradient will be the element-wise gradient,
+                $$
+                f&rsquo;(t) = (x&rsquo;(t), y&rsquo;(t))
+                $$</p>
+
+            <pre><code class="language-python">t = tf.linspace(0., 2 * np.pi, 50)
+
+# `persistent=True` because we extract two gradients here
+with tf.GradientTape(persistent=True) as g:
+    g.watch(t)
+    f = [tf.cos(t), tf.sin(t)]
+
+# Note: `g.gradient(f, t)` returns `sum(grads)`
+grads = [g.gradient(func, t) for func in f]
+</code></pre>
+
+            <p><img src="/img/differential_geometry_11_0.png" alt="png" /></p>
+
+            <p>Notice that the gradient is a <em>function</em> from \([0, 2 \pi] \rightarrow \mathbb{R}^2\):</p>
+
+            <p>$$
+                f&rsquo;(t) = (-\sin t, \cos t)
+                $$</p>
+
+            <h2 id="surfaces">Surfaces</h2>
+
+            <p>I pick up now with Chapter 0 of do Carmo&rsquo;s <em>Differential Geometry</em>. The fact that I am emphasizing here is that:</p>
+
+            <p><strong>In calculus, we prove that a change of parameters is differentiable. In differential geometry, that is part of the definition.</strong></p>
+
+            <p>In order to emphasize this, we should consider:</p>
+
+            <ul>
+                <li>What does a change of parameters even mean?</li>
+                <li>What does it mean to be differentiable?</li>
+            </ul>
+
+            <h3 id="functions-mathbb-r-2-rightarrow-mathbb-r">Functions \(\mathbb{R}^2 \rightarrow \mathbb{R}\)</h3>
+
+            <p>First we need to define nice, invertible functions:</p>
+
+            <p><strong>Definition (homeomorphism)</strong> A function \(\mathbf{x}\) is a <em>homeomorphism</em> if</p>
+
+            <ul>
+                <li>\(\mathbf{x}\) is 1-to-1 and onto</li>
+                <li>\(\mathbf{x}\) is continuous</li>
+                <li>\(\mathbf{x}^{-1}\) is continuous</li>
+            </ul>
+
+            <p><strong>Discussion</strong> In most examples I have seen, we <em>define</em> the range of a map to be wherever it maps, so it is mechanically a surjective (onto) mapping. So if we want to make our parametric map of the circle above into a homeomorphism, we are mostly doing bookkeeping of domains and ranges:</p>
+
+            <p>Consider</p>
+
+            <p>$$
+                \mathbf{x}: \mathbb{R} \rightarrow \mathbb{R}^2 = (\cos t, \sin t)
+                $$</p>
+
+            <p>Note that this is not injective (1-to-1), since \(\mathbf{x}(0) = \mathbf{x}(2 \pi) = (1, 0)\). It is also not surjective (onto), since no value of \(t\) maps to \((0, 0) \in \mathbb{R}^2\).</p>
+
+            <p>Then we instead define
+                $$
+                \mathbf{x}: [0, 2 \pi) \rightarrow {\mathbf{x}(t) \in \mathbb{R}^2: t \in [0, 2 \pi)} = (\cos t, \sin t)
+                $$</p>
+
+            <p>Now this is 1-to-1, onto, and continuous, and has an inverse for each point on the circle:</p>
+
+            <p>$$
+                \mathbf{x}^{-1}(x_1, x_2) = \arctan \frac{x_1}{x_2} + \frac{\pi}{2},
+                $$</p>
+
+            <p>where we would do some bookkeeping for \(x_2 = 0\) and making sure \(\arctan\) mapped to \([0, 2 \pi)\).</p>
+
+            <p>Now we can provide do Carmo&rsquo;s definition of a regular surface:</p>
+
+            <p><strong>Definition (regular surface)</strong> \(S \subset \mathbb{R}^3\) is a <em>regular surface</em> if, for every \(p \in S\), there exists a neighborhood \(V\) of \(p\) and \(\mathbf{x} : U \subset \mathbb{R}^2 \rightarrow V \cap S\) so that</p>
+
+            <ul>
+                <li>\(\mathbf{x}\) is a differentiable homeomorphism</li>
+                <li>The differential \((d\mathbf{x})_q : \mathbb{R}^2 \rightarrow \mathbb{R}^3\) is injective for all \(q \in U\).</li>
+            </ul>
+
+            <p><strong>Discussion</strong> This definition defines a surface as a subset of \(\mathbb{R}^3\) as being a surface: the map \(\mathbf{x}\) is not the surface! It is important, and will be part of the definition of a manifold, that there are many different maps that give the same surface.</p>
+
+            <p>Note that the differential \((d\mathbf{x})_q\) is a \(3\times 2\) matrix, and <em>injectivity</em> means that is has full rank. The discussion of neighborhoods above should remind you of the discussion about homeomorphisms above (bookkeeping so the maps are 1-to-1 and onto), and continuity conditions for those familiar with topology (this connection will not be needed to understand the rest of this).</p>
+
+            <p>Let&rsquo;s look at an example of a surface to motivate a concrete discussion:</p>
+
+            <pre><code class="language-python">X, Y = tf.meshgrid(tf.linspace(-2., 2., 50), tf.linspace(-2., 2., 50))
+hyperbolic_parabaloid = lambda x, y: 1 - x**2 + y**2 # look it up
+
+with tf.GradientTape() as g:
+    g.watch([X, Y])
+    f = hyperbolic_parabaloid(X, Y)
+
+grad = g.gradient(f, [X, Y])
+</code></pre>
+
+            <p><img src="/img/differential_geometry_17_0.png" alt="png" /></p>
+
+            <p>If we claim the thing plotted above is a <em>regular surface</em>, we need to show every point has a neighborhood that is the image of a differentiable homeomorphism with an injective differential. Phew!</p>
+
+            <p>Luckily, we claim that <em>all</em> points have the same neighborhood and the same differentiable homeomorphism. Specifically, the set \(U \subset \mathbb{R}^2\) is \((-2, 2) \times (-2, 2)\), and in the code, we generate this with <code>tf.meshgrid</code>. Also, the map \(\mathbf{x}: U \rightarrow S\) is the function <code>hyperbolic_parabaloid</code>, given by</p>
+
+            <p>$$
+                \mathbf{x}(x_1, x_2) = (x_1, x_2, 1 - x_1^2 + x_2^2),
+                $$</p>
+
+            <p>which is continuous, because polynomials are. The differential is given by</p>
+
+            <p>$$
+                (d\mathbf{x})_{(x_1, x_2)} = \begin{bmatrix}
+                1 &amp; 0 <br />
+                0 &amp; 1 <br />
+                -2x_1 &amp; 2x_2
+                \end{bmatrix}
+                $$</p>
+
+            <p>The fact that it exists and is continuous means that \(\mathbf{x}\) is differentiable, and it has rank 2 (i.e., full rank, i.e., &ldquo;is injective&rdquo;) for any \((x_1, x_2)\) because the columns are independent.</p>
+
+            <p>We still need to show that the inverse is continuous. But the inverse is so silly it feels like cheating, and is given by</p>
+
+            <p>$$
+                \mathbf{x}^{-1}(y_1, y_2, y_3) = (y_1, y_2)
+                $$</p>
+
+            <p>In words: just project the surface onto the plane to get the inverse.</p>
+
+            <p><strong>Definition (parameterization)</strong> A map \(\mathbf{x}\) that defines a regular surface \(S\) in a neighborhood of \(p \in S\) is called a <em>parameterization of \(S\) at \(p\)</em>.</p>
+
+            <p><strong>Discussion</strong> Note that in the definition of a regular surface, \(S\) did not care about \(U\). So we can trivially write down another parameterization of the exact same surface \(S\), but with \(U = (-4, 4) \times (-4, 4)\).</p>
+
+            <pre><code class="language-python">X, Y = tf.meshgrid(tf.linspace(-4., 4., 50), tf.linspace(-4., 4., 50))
+hyperbolic_parabaloid_param2 = lambda x, y: 1 - (x / 2)**2 + (y / 2)**2 # look it up
+
+with tf.GradientTape() as g:
+    g.watch([X, Y])
+    f = hyperbolic_parabaloid_param2(X, Y)
+
+grad = g.gradient(f, [X, Y])
+</code></pre>
+
+            <p><img src="/img/differential_geometry_20_0.png" alt="png" /></p>
+        </section>
+
+        <section>
+            <h3 id="the-highlight-of-multivariable-differentiable-calculus">The highlight of multivariable differentiable calculus</h3>
+
+            <p>Just like a homeomorphism is a continuous function with continuous inverse, a <em>diffeomorphism</em> is a differentiable function with differentiable inverse. do Carmo in fact assumes <em>smoothness</em>, so the function and its inverse have infinitely many derivatives.</p>
+
+            <p><strong>Theorem (important)</strong> A change of parameters is a diffeomorphism.</p>
+
+            <p>This will be <em>part of the definition</em> of a manifold, but it is <em>a theorem that is proved</em> in a calculus course. We haven&rsquo;t defined a change of parameters yet!</p>
+
+            <p><strong>Definition (change of parameters)</strong> If \(\mathbf{x}_{\alpha} : U_{\alpha} \rightarrow S\), \(\mathbf{x}_{\beta} : U_{\beta} \rightarrow S\) are two parameterizations of \(S\), and \(x_{\alpha}(U_{\alpha}) \cap x_{\beta}(U_{\beta}) = W \ne \varnothing\), then
+                $$
+                x_{\beta}^{-1} \circ x_{\alpha} : x_{\alpha}^{-1}(W) \rightarrow \mathbb{R}^2
+                $$
+                is a <em>change of parameters</em>.</p>
+
+            <p>Remember that \(x_{\beta}^{-1} \circ x_{\alpha}\) is a composition of two functions: first \(x_{\alpha}\) maps points onto a surface, then \(x_{\beta}^{-1}\) maps those points back to \(\mathbb{R}^2\).</p>
+        </section>
+
+        <section>
+            <h3 id="why-is-the-change-of-parameters-being-a-diffeomorphism-so-important">Why is the change of parameters being a diffeomorphism so important?</h3>
+
+            <p>It turns out that for most questions about a surface (or, soon, a manifold) do not depend on where it is sitting in \(\mathbb{R}^3\). For example, in calculus, we often ask about the directional derivative of the height of a graph. Then we have our parameterization, \(\mathbf{x}: \mathbb{R}^2 \rightarrow S \subset \mathbb{R}^3\), and the height function, \(f(s_1, s_2, s_3): S \rightarrow \mathbb{R}\), where \(f(s_1, s_2, s_3) = s_3\). Then the gradient is actually just a calculation of the gradient of
+                $$
+                f \circ \mathbf{x}: \mathbb{R}^2 \rightarrow \mathbb{R}
+                $$</p>
+
+            <p>We are interested in the gradient of \(f\), a function on \(S\), which should not need to know about \(\mathbf{x}\), but it looks like it cares a lot about \(\mathbf{x}\)! The multidimensional chain rule looks like this:</p>
+
+            <p>$$
+                (d f \circ \mathbf{x})_{\mathbf{q}} = (df)_{\mathbf{x}(\mathbf{q})} \circ (d\mathbf{x})_{\mathbf{q}}
+                $$</p>
+
+            <p>As a dimension check, we expect</p>
+
+            <ul>
+                <li>\((d f \circ \mathbf{x})_{\mathbf{q}}\) to be a \(1 \times 2\) matrix,</li>
+                <li>\((d\mathbf{x})_{\mathbf{q}}\) to be \(3 \times 2\) matrix, and</li>
+                <li>\((df)_{\mathbf{x}(\mathbf{q})}\) to be a \(1 \times 3\) matrix</li>
+            </ul>
+
+            <p>Since matrices are the same as linear transformations, the \(\circ\) in &ldquo;\((df)_{\mathbf{x}(\mathbf{q})} \circ (d\mathbf{x})_{\mathbf{q}}\)&rdquo; is a matrix multiplication.</p>
+
+            <p><strong>Exercise to the reader</strong> Show that if \(x_{\alpha}\) and \(x_{\beta}\) are two parameterizations of \(S\), then \((d f \circ x_{\alpha})_{\mathbf{q}} = (d f \circ x_{\beta})_{x_{\beta}^{-1} \circ x_{\alpha}(\mathbf{q})}\)</p>
+
+            <p>This exercise shows that the gradients are independent of the parameterizations!</p>
+        </section>
+
+        <section>
+            <h2 id="differentiable-manifolds">Differentiable Manifolds</h2>
+
+            <p>Bumping up to differentiable manifolds, not much changes, except we no longer assume we know how to do calculus in the space the surface sits in:</p>
+
+            <p><strong>Definition (differentiable manifold)</strong> A <em>differentiable manifold</em> is a set \(M\) and a family of injective mappings \(\mathbf{x}_{\alpha}: U_{\alpha} \rightarrow M\) so that</p>
+
+            <ol>
+                <li>\(\bigcup_{\alpha}\mathbf{x}_{\alpha}(U_{\alpha}) = M\)</li>
+
+                <li>
+                    <p>For any \(\alpha, \beta\) with \(\mathbf{x}_{\alpha}(U_{\alpha}) \cap \mathbf{x}_{\beta}(U_{\beta}) = W\), then:</p>
+
+                    <ul>
+                        <li>\(\mathbf{x}_{\alpha}^{-1}(W)\) and \(\mathbf{x}_{\beta}^{-1}(W)\) are open sets</li>
+                        <li>\(\mathbf{x}_{\beta}^{-1} \circ \mathbf{x}_{\alpha}\) is differentiable</li>
+                    </ul>
+                </li>
+
+                <li>
+                    <p>the collection of maps is maximal</p>
+                </li>
+            </ol>
+
+            <p><strong>Discussion</strong> We call this collection of maps \({\mathbf{x}_{\alpha}}\) an <em>atlas</em>. This is a technical sounding definition, but the only two differences is that we require a change of parameters to be differentiable, which is important, and we require the atlas to be <em>maximal</em>, which just means that any map that satisfies the other conditions is in the atlas. This makes writing proofs easier, and can be mostly ignored.</p>
+        </section>
+
+        <section>
+            <h3 id="example">Example</h3>
+
+            <p>A (almost) parameterization of the sphere is</p>
+
+            <p>$$
+                \mathbf{x}(\phi, \theta) = (\sin \phi \cos \theta, \sin \phi \cos \phi, \cos \phi)
+                $$</p>
+
+            <p>Note that there&rsquo;s some bookkeeping to be done around the north and south pole: either nothing maps there (i.e., \(\mathbf{x}: (0, 2\pi) \times (0, 2\pi) \rightarrow S\)), meaning the sphere is not covered, or lots of points map there (i.e., \(\mathbf{x}: [0, 2\pi] \times [0, 2\pi] \rightarrow S\)), and \(\mathbf{x}\) is not injective.</p>
+
+            <pre><code class="language-python">phi, theta = tf.meshgrid(tf.linspace(0., 2 * np.pi, 50), tf.linspace(0., 2. * np.pi, 50))
+X = tf.sin(phi) * tf.cos(theta)
+Y = tf.sin(phi) * tf.sin(theta)
+Z = tf.cos(phi)
+</code></pre>
+
+            <p><img src="/img/differential_geometry_26_0.png" alt="png" /></p>
+
+            <p>Two more parameterizations are</p>
+
+            <p>$$
+                \mathbf{x}_{\alpha}(x_1, x_2) = \sqrt{1 - x_1^2 - x_2^2}
+                $$</p>
+
+            <p>$$
+                \mathbf{x}_{\beta}(x_1, x_2) = -\sqrt{1 - x_1^2 - x_2^2}
+                $$</p>
+
+            <p>here there&rsquo;s some care to be had around the equator.</p>
+
+            <pre><code class="language-python">x1, x2 = tf.meshgrid(tf.linspace(-1., 1., 100), tf.linspace(-1., 1., 100))
+Xa = tf.sqrt(1 - x1 ** 2 - x2 ** 2)
+Xb = -tf.sqrt(1 - x1 ** 2 - x2 ** 2)
+</code></pre>
+
+            <p><img src="/img/differential_geometry_29_0.png" alt="png" /></p>
+
+            <p>Since we assume our atlas is maximal, all three of these maps should actually be in it, as should all rotations of the maps, and subsets of the maps.</p>
+
+            <p><img src="/img/differential_geometry_31_0.png" alt="png" /></p>
+
+        </section>
+
+        <section>
+            <h2 id="calculus-on-manifolds">Calculus on manifolds</h2>
+
+            <p>We conclude with calculus on manifolds. The rule of thumb here is to push everything through a parameterization or its inverse, and do your calculus in \(\mathbb{R}^n\).</p>
+
+            <p><strong>Definition (differentiable map)</strong> Given two differentiable manifolds, \(M_{\alpha}\) with atlas \({\mathbf{x}_{\alpha}}\) and \(M_{\beta}\) with atlas \({\mathbf{y}_{\beta}}\), a map \(f: M_{\alpha} \rightarrow M_{\beta}\) is <em>differentiable</em> at \(p \in M_{\alpha}\) if there exists a parameterization \(\mathbf{x} \in {\mathbf{x}_{\alpha}}\) and \(\mathbf{y} \in {\mathbf{y}_{\beta}}\) so that
+                $$
+                \mathbf{y}^{-1} \circ f \circ \mathbf{x}
+                $$</p>
+
+            <p>is differentiable at \(\mathbf{x}^{-1}(p)\).</p>
+
+            <p><strong>Definition (differentiable curve)</strong> A differentiable function \(\alpha: (-\epsilon, \epsilon) \subset \mathbb{R} \rightarrow M\) is called a <em>differentiable curve</em> in the manifold \(M\).</p>
+
+            <p><strong>Definition (tangent vector)</strong> Let \(\alpha\) be a differentiable curve on \(M\), \(\alpha(0) = p \in M\), let \(\mathcal{D}\) be the differentiable functions on \(M\) at \(p\), and let \(f\) be an element of \(\mathcal{D}\). The <em>tangent vector</em> to \(\alpha\) is a function from \(\mathcal{D} \rightarrow \mathbb{R}\),
+                $$
+                \alpha&rsquo;(0)f = \left. \frac{d(f \circ \alpha)}{dt} \right|_{t=0}
+                $$
+                The set of all tangent vectors at \(p\) is denoted \(T_pM\).</p>
+
+            <p><strong>Discussion</strong> The tangent vector to a curve at a point eats functions and returns a real number. We will give \(T_pM\) the structure so that it is a vector space.</p>
+
+            <p><strong>Example</strong>: This is the parabaloid from earlier, with a curve lifted onto it, and the point <code>t=0</code> marked in red.</p>
+
+            <pre><code class="language-python">X, Y = tf.meshgrid(tf.linspace(-2., 2., 50), tf.linspace(-2., 2., 50))
+hyperbolic_parabaloid = lambda x, y: 1 - x**2 + y**2 # look it up
+
+t = tf.linspace(-1., 1., 100)
+y = 1 + .5 * tf.cos(8 * t - 1)
+f2 = hyperbolic_parabaloid(t, y)
+
+with tf.GradientTape() as g:
+    g.watch([X, Y])
+    f = hyperbolic_parabaloid(X, Y)
+</code></pre>
+
+            <p><img src="/img/differential_geometry_37_0.png" alt="png" /></p>
+
+            <p>We can also look at the tangent vector to \(\alpha\) of the height of the graph by plotting \(f \circ \alpha : (-\epsilon, \epsilon) \rightarrow \mathbb{R}\):</p>
+
+            <p><img src="/img/differential_geometry_39_0.png" alt="png" /></p>
+        </section>
+
+        <section>
+            <h2 id="the-tangent-vectors-are-a-tangent-space">The tangent vectors are a tangent space</h2>
+
+            <p>If we write down a parameterization \(\mathbf{x}: U \subset \mathbb{R}^n \rightarrow M\) of \(M\) at \(p = \mathbf{x}(0)\), then we can use the chain rule to write down the tangent vector to a curve \(\alpha\) of a function \(f\). Using the definition from earlier,
+                $$
+                \alpha&rsquo;(0)f = \left. \frac{d(f \circ \alpha)}{dt} \right|_{t=0},
+                $$</p>
+
+            <p>but \(\alpha(t) = (x_1(t), \ldots, x_n(t))\), so</p>
+
+            <p>$$
+                \alpha&rsquo;(0)f = \left. \frac{d}{dt} f(x_{1}(t), \ldots, x_{n}(t)) \right|_{t=0}
+                $$</p>
+
+            <p>Applying the chain rule gives</p>
+
+            <p>$$
+                \alpha&rsquo;(0)f = \sum_{j=1}^n x_i&rsquo;(0) \left( \frac{\partial f}{\partial x_j} \right) = \left(\sum_{j=1}^n x_i&rsquo;(0) \left( \frac{\partial}{\partial x_j} \right)_0 \right) f
+                $$</p>
+
+            <p>It turns out (but can be checked!) that the vectors \(\left( \frac{\partial}{\partial x_j} \right)_0\) are the tangent vectors of the coordinate curves in the parameterization given by \(\mathbf{x}\). They define a basis of the vector space \(T_pM\), associated with the parameterization \(\mathbf{x}\).</p>
+
+            <p>$$
+                \left( \frac{\partial}{\partial x_j} \right)_0 = \left( \frac{\partial}{\partial x_1}, \ldots, \frac{\partial}{\partial x_n} \right)_{0}
+                $$</p>
+
+        </section>
+
+        <section>
+            <h2 id="one-last-theorem-and-definition">One last theorem and definition</h2>
+
+            <p><strong>Definition (differential)</strong> Suppose you have a differentiable mapping \(\varphi: M_1 \rightarrow M_2\) between manifolds, \(p \in M_1\), then the <em>differential of \(\varphi\) at \(p\)</em>, is denoted \(d_p\varphi: T_pM_1 \rightarrow T_{\varphi(p)}M_2\), is defined as follows:</p>
+
+            <ol>
+                <li>Take a vector \(\nu \in T_pM_1\)</li>
+                <li>Take a curve \(\alpha : (-\epsilon, \epsilon) \rightarrow M_1\) with \(\alpha(0) = p\) and \(\alpha&rsquo;(0) = \nu\)</li>
+                <li>Let \(\beta = \varphi \circ \alpha\)</li>
+                <li>Define \(d_p\varphi(\nu) = \beta&rsquo;(0)\)</li>
+            </ol>
+
+            <p>It is a theorem to show that \(d_p\varphi\) does not depend on the choice of \(\alpha\).</p>
+        </section>
+
+
+    </main>
+    <footer>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

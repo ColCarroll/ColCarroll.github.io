@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Hamiltonian Monte Carlo from scratch</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Hamiltonian Monte Carlo from scratch</h1>
+            <p class="date">11 April, 2019</p>
+        </section>
+    </header>
+    <main>
+        <section>
+            <p><em>This is the second post in a series exploring implementing gradient based samplers in practice. The first post is <a href="../blog/autodiff_exercises.html">here</a>. A well tested, documented library containing all of this code is available <a href="https://github.com/ColCarroll/minimc" target="_blank">here</a>. Pull requests and issues are welcome.</em></p>
+
+            <p><em>The notebook that generated this blog post can be found <a href="https://gist.github.com/ColCarroll/601700fd24a6c3299d533eec92b8d171" target="_blank">here</a>.</em></p>
+
+            <p>Markov chain Monte Carlo (MCMC) is a method used for sampling from posterior distributions. Hamiltonian Monte Carlo (HMC) is a variant that uses gradient information to scale better to higher dimensions, and which is used by software like <a href="https://pymc.io/" target="_blank">PyMC3</a> and <a href="https://mc-stan.org/" target="_blank">Stan</a>. Some great references on MCMC in general and HMC in particular are</p>
+
+            <ul>
+                <li><strong>Christopher Bishop&rsquo;s &ldquo;<a href="https://www.microsoft.com/en-us/research/people/cmbishop/#!prml-book" target="_blank">Pattern Recognition and Machine Learning</a>&ldquo;</strong> A classic machine learning textbook, and gives a good overview of motivating sampling, as well as a number of different sampling strategies.</li>
+                <li><strong>Iain Murray&rsquo;s <a href="http://videolectures.net/mlss09uk_murray_mcmc/" target="_blank">lectures at the MLSS</a></strong> A good, approachable lecture, including intuition about how these algorithms are applied and implemented</li>
+                <li><strong>Michael Betancourt&rsquo;s &ldquo;<a href="https://arxiv.org/abs/1701.02434" target="_blank">A Conceptual Introduction to Hamiltonian Monte Carlo</a>&ldquo;</strong> A thorough, readable reference that is the main source here</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 id="our-strategy">Our Strategy</h2>
+
+            <ol>
+                <li>Give a few pictures of what is going on</li>
+                <li>Write down the math we need from Betancourt&rsquo;s &ldquo;A Conceptual Introduction to Hamiltonian Monte Carlo&rdquo;</li>
+                <li>Write down the implementation in Python</li>
+            </ol>
+            <p>One thing I am not going to do here is justify <em>why</em> this works: Betancourt and his references do a good job of that. I will mention but not pursue ways to make this algorithm fast, leaving those for future blog posts.</p>
+        </section>
+
+        <section>
+
+            <h2 id="pictures-of-what-s-going-on">Pictures of what&rsquo;s going on</h2>
+
+            <h3 id="hamiltonian-trajectories">Hamiltonian trajectories</h3>
+
+            <p>Starting from any point, we can generate a new sample from a probability distribution by giving the point some momentum and then updating the position and momentum according to a certain system of differential equations (Hamilton&rsquo;s equations, whence the name). The differential equation depends on the probability distribution, and we update the position and momentum using &ldquo;leapfrog integration&rdquo;. Here are three trajectories of a 2d multivariate normal.</p>
+
+            <p><img src="/img/normal_leapfrog.png" alt="png" /></p>
+
+            <p>Calculating these trajectories is expensive, and we will do a lot of work to make this less expensive. Sometimes trajectories are not precisely ellipses. Here are three trajectories for a mixture of three normal distributions.</p>
+
+            <p><img src="/img/mixture_leapfrog.png" alt="png" /></p>
+
+            <p>Notice that the Hamiltonian dynamics preserve energy: the momentum is indicated by the size and direction of the arrows; when the trajectory is furthest away from one of the modes, the arrows are very small indicating large potential energy and small kinetic energy. There is also one trajectory that stays very close to a single mode because it does not have the energy to move to another.</p>
+
+            <p>There are also tricky probability densities to sample from! One is &ldquo;Neal&rsquo;s funnel&rdquo;, where you draw a normally distributed \(\theta\), and then use \(e^{\theta}\) as the scale for a normal distribution. This sort of geometry turns up in hierarchical models, and are important to be able to sample from. A benefit of gradient based samplers is that they go very obviously wrong when they go wrong.</p>
+
+            <p><img src="/img/funnel_leapfrog.png" alt="png" /></p>
+
+            <p>Can you see which of these three trajectories went terribly wrong? We will call these &ldquo;divergences&rdquo;, and use them to diagnose problems in a later post.</p>
+
+            <h3 id="hamiltonian-monte-carlo">Hamiltonian Monte Carlo</h3>
+
+            <p>Once we can generate these Hamiltonian trajectories, we fix an integration length, generate a trajectory of that length, and that is our next sample. Starting from that point, we pick a new momentum at random, and keep going. Here is an example of 10 draws from a 2D multivariate Gaussian with 3 different path lengths.</p>
+
+            <p><img src="/img/normal_hmc.png" alt="png" /></p>
+
+            <p>Notice that each trajectory starts from where the previous trajectory ended, but the momentum is totally different. In reality, we will make a much cruder estimate of the trajectory to save computing time, and accept or reject the proposal at the end of the trajectory, usually aiming to accept 60-80% of the time.</p>
+
+            <p>Here also are trajectories for a mixture of 3 multivariate normals, again with 3 different path lengths.</p>
+
+            <p><img src="/img/mixture_hmc.png" alt="png" /></p>
+
+            <p>Notice that mixing between modes can be hard, and can take time! The path length of 2 never makes it to a different mode! Of course, this is only drawing 10 samples, but it is something to keep in mind while tuning an HMC sampler.</p>
+
+        </section>
+
+        <section>
+            <h2 id="the-math-we-need-for-hamiltonian-monte-carlo">The math we need for Hamiltonian Monte Carlo</h2>
+
+            <p><em>The goal of this section is to present the equations from Betancourt&rsquo;s paper, so we can reference them in the code.</em></p>
+
+            <p>To reiterate, it should not be obvious <em>why</em> this algorithm samples from the correct distribution. The interested reader will consult one of the references given earlier, particularly Betancourt&rsquo;s paper, whose notation I will use.</p>
+
+            <h3 id="how-hmc-works">How HMC works</h3>
+
+            <ol>
+                <li>We concatenate all of our parameters into a single <em>position</em> variable, \(\mathbf{q}\). We are trying to sample from the probability density function \(\pi(\mathbf{q})\).</li>
+                <li>We add a <em>momentum</em> variable, \(\mathbf{p}\), of the same dimension as \(\mathbf{q}\), and consider the probability distribution
+                    $$
+                    \pi(\mathbf{q}, \mathbf{p}) = \pi(\mathbf{p} | \mathbf{q}) \pi(\mathbf{q}),
+                    $$
+                    where we get to choose \(\pi(\mathbf{p} | \mathbf{q})\). In practice, we will choose \(\pi(\mathbf{p} | \mathbf{q}) = \mathcal{N}(\mathbf{0}, M)\), and in this essay, we will choose \(M = I\).</li>
+                <li>Define the <em>Hamiltonian</em>, \(H(\mathbf{q}, \mathbf{p}) = -\log \pi(\mathbf{q}, \mathbf{p})\).Given the factorization above, we get
+                    $$
+                    H(\mathbf{q}, \mathbf{p}) = -\log \pi(\mathbf{p} | \mathbf{q}) - \log \pi(\mathbf{q}) = K(\mathbf{p}, \mathbf{q}) + V(\mathbf{q}),
+                    $$
+                    where \(K(\mathbf{p}, \mathbf{q})\) is called the <em>kinetic energy</em>, and \(V(\mathbf{q})\) is called the <em>potential energy</em>, using an analogy to physical systems.</li>
+                <li>We evolve the system \((\mathbf{q}, \mathbf{p})\) according to <em>Hamilton&rsquo;s equations</em>:
+                    $$
+                    \frac{d \mathbf{q}}{dt} = \frac{\partial H}{\partial \mathbf{p}} = \frac{\partial K}{\partial \mathbf{p}} + \frac{\partial V}{\partial \mathbf{p}}\\<br />
+                    \frac{d \mathbf{p}}{dt} = -\frac{\partial H}{\partial \mathbf{q}}= -\frac{\partial K}{\partial \mathbf{q}} - \frac{\partial V}{\partial \mathbf{q}}
+                    $$
+                    Note that \(\frac{\partial V}{\partial \mathbf{p}} = \mathbf{0}\).</li>
+            </ol>
+
+            <p>We chose the kinetic energy to be a Gaussian, which lets us calculate those gradients by hand instead of recalculating them. Specifically,
+                $$
+                K(\mathbf{p}, \mathbf{q}) = \frac{1}{2}\mathbf{p}^T M^{-1}\mathbf{p} + \log |M| + \text{const.},
+                $$
+                and with our choice of \(M = I\),
+                $$
+                K(\mathbf{p}, \mathbf{q}) = \frac{1}{2}\mathbf{p}^T \mathbf{p} + \text{const.},
+                $$
+                so
+                $$
+                \frac{\partial K}{\partial \mathbf{p}} = \mathbf{p}
+                $$
+                and
+                $$
+                \frac{\partial K}{\partial \mathbf{q}} = \mathbf{0}
+                $$</p>
+
+            <p>We can then simplify Hamilton&rsquo;s equations to:</p>
+
+            <p>$$
+                \frac{d \mathbf{q}}{dt} = \mathbf{p} \\<br />
+                \frac{d \mathbf{p}}{dt} = - \frac{\partial V}{\partial \mathbf{q}}
+                $$</p>
+
+            <p>This is the algorithm, then:
+                - Sample a \(\mathbf{p} \sim \mathcal{N}(0, I)\),
+                - Simulate \(\mathbf{q}(t)\) and \(\mathbf{p}(t)\) for some amount of time \(T\) using the simplified equations above
+                - \(\mathbf{q}(T)\) is our new sample.</p>
+
+        </section>
+
+        <section>
+            <h2 id="hamiltonian-monte-carlo-in-code">Hamiltonian Monte Carlo in code</h2>
+
+            <p>This is a small function. A few things to notice in particular:</p>
+
+            <ul>
+                <li>We need to compute \(\frac{\partial V}{\partial \mathbf{q}}\), and do so using autodiff. See <a href="https://colindcarroll.com/2019/04/06/exercises-in-automatic-differentiation-using-autograd-and-jax/" target="_blank">my previous post on autodiff libraries</a>. The <code>negative_log_prob</code> argument must be defined using <code>autograd</code>.</li>
+                <li>We still need to define the function <code>leapfrog</code>, which is below.</li>
+                <li>There is a <a href="https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm#Formal_derivation" target="_blank">Metropolis acceptance</a> dance at the bottom. This corrects for errors introduced by the <code>leapfrog</code> integrator. I had a bug in this implementation that was hard to spot: we are sampling from \(\pi(\mathbf{q}, \mathbf{p})\) here, not \(\pi(\mathbf{q})\), so the momentum at the end of the trajectory needs to be returned by the leapfrog function, too.</li>
+            </ul>
+
+            <pre><code class="language-python">from autograd import grad
+import autograd.numpy as np
+import scipy.stats as st
+
+
+def hamiltonian_monte_carlo(n_samples, negative_log_prob, initial_position, path_len=1, step_size=0.5):
+    &quot;&quot;&quot;Run Hamiltonian Monte Carlo sampling.
+
+    Parameters
+    ----------
+    n_samples : int
+        Number of samples to return
+    negative_log_prob : callable
+        The negative log probability to sample from
+    initial_position : np.array
+        A place to start sampling from.
+    path_len : float
+        How long each integration path is. Smaller is faster and more correlated.
+    step_size : float
+        How long each integration step is. Smaller is slower and more accurate.
+
+    Returns
+    -------
+    np.array
+        Array of length `n_samples`.
+    &quot;&quot;&quot;
+    # autograd magic
+    dVdq = grad(negative_log_prob)
+
+    # collect all our samples in a list
+    samples = [initial_position]
+
+    # Keep a single object for momentum resampling
+    momentum = st.norm(0, 1)
+
+    # If initial_position is a 10d vector and n_samples is 100, we want
+    # 100 x 10 momentum draws. We can do this in one call to momentum.rvs, and
+    # iterate over rows
+    size = (n_samples,) + initial_position.shape[:1]
+    for p0 in momentum.rvs(size=size):
+        # Integrate over our path to get a new position and momentum
+        q_new, p_new = leapfrog(
+            samples[-1],
+            p0,
+            dVdq,
+            path_len=path_len,
+            step_size=step_size,
+        )
+
+        # Check Metropolis acceptance criterion
+        start_log_p = negative_log_prob(samples[-1]) - np.sum(momentum.logpdf(p0))
+        new_log_p = negative_log_prob(q_new) - np.sum(momentum.logpdf(p_new))
+        if np.log(np.random.rand()) &lt; start_log_p - new_log_p:
+            samples.append(q_new)
+        else:
+            samples.append(np.copy(samples[-1]))
+
+    return np.array(samples[1:])
+
+</code></pre>
+        </section>
+
+        <section>
+            <h2 id="the-leapfrog-integrator">The Leapfrog Integrator</h2>
+
+            <p>How do we simulate the differential equations above? A natural approach is to discretize <code>t</code>, and go back and forth updating <code>q</code> and <code>p</code>. It turns out this causes errors to accumulate in systematic ways, but there is a nice algorithm to simulate Hamiltonian dynamics. It involves updating the momentum <code>p</code> a half step, then the position <code>q</code> a whole step, and then finish updating <code>p</code> the other half of the step. When you do this in a loop, most of the half-step updates combine, and you just have to do some book-keeping at either end. There is also a momentum flip at the end that is important for technical reasons.</p>
+
+            <pre><code class="language-python">
+def leapfrog(q, p, dVdq, path_len, step_size):
+    &quot;&quot;&quot;Leapfrog integrator for Hamiltonian Monte Carlo.
+
+    Parameters
+    ----------
+    q : np.floatX
+        Initial position
+    p : np.floatX
+        Initial momentum
+    dVdq : callable
+        Gradient of the velocity
+    path_len : float
+        How long to integrate for
+    step_size : float
+        How long each integration step should be
+
+    Returns
+    -------
+    q, p : np.floatX, np.floatX
+        New position and momentum
+    &quot;&quot;&quot;
+    q, p = np.copy(q), np.copy(p)
+
+    p -= step_size * dVdq(q) / 2  # half step
+    for _ in range(int(path_len / step_size) - 1):
+        q += step_size * p  # whole step
+        p -= step_size * dVdq(q)  # whole step
+    q += step_size * p  # whole step
+    p -= step_size * dVdq(q) / 2  # half step
+
+    # momentum flip at end
+    return q, -p
+</code></pre>
+
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+
+            <p>&copy; 2025 Colin Carroll</p>
+        </div>
+    </footer>
+</body>
+
+</html>

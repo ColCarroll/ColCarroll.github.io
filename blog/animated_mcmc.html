@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Animated MCMC</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Animated MCMC</h1>
+            <p class="date">24 November, 2018</p>
+        </section>
+    </header>
+    <main>
+        <section>
+            <p>This blog was generated from <a href="https://gist.github.com/ColCarroll/f6985375d3029c0651a4f41e83f99499" target="_blank">a working notebook that is available here</a>.</p>
+
+        </section>
+
+        <section>
+            <h2 id="1-write-down-an-interesting-distribution">1. Write down an interesting distribution</h2>
+
+            <p>A <em>mixture of Gaussians</em> is different from a sum of Gaussians, in that it is not Gaussian itself, but it is visually interesting, can be difficult to generate independent samples from, and <em>knows many secrets</em>.</p>
+
+            <p>Here is an implementation that mostly follows the API of <code>scipy.stats</code> in that it provides a <code>.pdf</code> method for the <em>probability density function</em>, and a <code>.rvs</code> function to provide random samples. If the <code>rvs</code> function looks a little complicated, it is because <a href="https://github.com/pymc-devs/pymc3/issues?q=is%3Aissue+is%3Aopen+label%3Ashape_problem" target="_blank">shapes can be hard in high dimensions</a>, ok?</p>
+
+            <p>We can use the <code>.rvs</code> method to view the density of this distribution.</p>
+
+            <pre><code class="language-python">class MixtureOfGaussians:
+    &quot;&quot;&quot;Two standard normal distributions, centered at +2 and -2.&quot;&quot;&quot;
+    def __init__(self):
+        self.components = [st.norm(-2, 1), st.norm(2, 1)]
+        self.weights = np.array([0.5, 0.5])
+
+    def pdf(self, x):
+        return self.weights.dot([component.pdf(x) for component in self.components])
+
+    def rvs(self, size=1):
+        idxs = np.random.randint(0, 2, size=size)
+        result = np.empty(size)
+        for idx, component in enumerate(self.components):
+            spots, = np.where(idxs==idx)
+            result[spots] = component.rvs(size=spots.shape[0])
+        return result
+
+az.plot_kde(MixtureOfGaussians().rvs(10_000), figsize=FIGSIZE);
+</code></pre>
+
+            <p><img src="/img/animation-1.png" alt="mixture of gaussians" /></p>
+
+        </section>
+
+        <section>
+            <h2 id="2-write-down-mcmc">2. Write down MCMC</h2>
+
+            <p>There are a few software libraries for doing this sort of thing [<a href="https://docs.pymc.io/" target="_blank">1</a>][<a href="http://mc-stan.org/" target="_blank">2</a>][<a href="http://edwardlib.org/" target="_blank">3</a>][<a href="https://emcee.readthedocs.io/en/stable/" target="_blank">4</a>][<a href="http://pyro.ai/" target="_blank">5</a>][<a href="https://dotnet.github.io/infer/" target="_blank">6</a>][<a href="https://www.tensorflow.org/probability/" target="_blank">7</a>], but we can use 8 stripped down lines.</p>
+
+            <p>You should look up the Metropolis algorithm if you are not familiar! It is beautiful and important. Also, <a href="https://colindcarroll.com/2018/01/01/bad-traces-or-dont-use-metropolis/" target="_blank">don&rsquo;t use it</a>.</p>
+
+            <p>In general, this lets you generate draws from a probability distribution, given access to the probability density function. So we will <em>pretend</em> we did not implement <code>.rvs</code> above, and generate samples using only the <code>.pdf</code> method.</p>
+
+            <pre><code class="language-python">def metropolis_sample(pdf, *, steps, step_size, init=0.):
+    &quot;&quot;&quot;Metropolis sampler with a normal proposal.&quot;&quot;&quot;
+    point = init
+    samples = []
+    for _ in range(steps):
+        proposed = st.norm(point, step_size).rvs()
+        if np.random.rand() &lt; pdf(proposed) / pdf(point):
+            point = proposed
+        samples.append(point)
+    return np.array(samples)
+</code></pre>
+
+        </section>
+
+        <section>
+            <h2 id="3-find-a-visually-pleasing-set-of-draws">3. Find a visually pleasing set of draws</h2>
+
+            <p>This is more art that science, but the animation looks nice if the draws:</p>
+
+            <ol>
+                <li>Are correlated</li>
+                <li>Switch between modes pretty often</li>
+                <li>End up with a histogram that is &ldquo;close&rdquo; to the true one</li>
+                <li>Have about 3,000 draws (the animation ends up being ~30s long)</li>
+            </ol>
+
+            <p>I found a random seed that did all this, by looking at the <a href="https://arviz-devs.github.io/arviz/examples/plot_trace.html" target="_blank">trace plot</a>. The seed was 0, but I was ready to do some real work on it.</p>
+
+            <pre><code class="language-python">seed = 0
+np.random.seed(seed)
+samples = metropolis_sample(MixtureOfGaussians().pdf, steps=3_000, step_size=0.4)
+az.plot_trace(samples);
+</code></pre>
+
+            <p><img src="/img/animation-2.png" alt="trace plot" /></p>
+
+        </section>
+
+        <section>
+            <h2 id="4-prepare-the-static-plot">4. Prepare the static plot</h2>
+
+            <p>Influenced by <a href="https://twitter.com/babeheim/status/1063792960377053185" target="_blank">Bret Beheim&rsquo;s visualizations with tweenr</a>, I was looking for a plot with a similar aesthetic.</p>
+
+            <p>To do that, I have to</p>
+
+            <ol>
+                <li>Bucket the data into discrete bins (using <code>np.digitize</code>)</li>
+                <li>Set a y-value for each data point. I just count upwards from 0 for each bin, then divide by the max, so I know it is between 0 and 1.</li>
+            </ol>
+
+            <p>There is also a bunch of matplotlib styling at the bottom, to make everything look beautiful. I use the <code>viridis</code> color map to show which draw I am on. Later draws will be yellower.</p>
+
+            <pre><code class="language-python">hi, lo = samples.max(), samples.min()
+x = np.linspace(lo, hi, 100)
+bins = np.digitize(samples, x, right=True)
+
+counter = np.zeros_like(bins)  # y values
+counts = np.zeros_like(x)  # keep track of how points are already in each bin
+for idx, bin_ in enumerate(bins):
+    counts[bin_] += 1
+    counter[idx] = counts[bin_]
+counter = counter / counter.max()
+
+
+# Mess with plot styles here, since it is cheaper than animating
+fig, ax = plt.subplots(figsize=FIGSIZE)
+ax.set_ylim(0, 1)
+ax.set_xlim(bins.min(), bins.max())
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['left'].set_visible(False)
+
+ax.set_xticks([])
+ax.get_yaxis().set_visible(False)
+cmap = plt.get_cmap('viridis')
+colors = cmap(np.linspace(0, 1, bins.shape[0]))
+
+
+ax.scatter(bins, counter, marker='.', facecolors=colors);
+</code></pre>
+
+            <p><img src="/img/animation-3.png" alt="static animation" /></p>
+
+        </section>
+
+        <section>
+            <h2 id="5-make-the-animation">5. Make the animation</h2>
+
+            <p>This is taken pretty directly from the <a href="https://matplotlib.org/api/animation_api.html" target="_blank">matplotlib animation docs</a>, but I am using <code>scatter</code> instead of <code>plot</code> so that I can change colors of already plotted points. This means in the <code>update</code> step, I use <code>set_offsets</code> instead of <code>set_data</code>.</p>
+
+            <p>The falling animation is done with the <code>offset</code> below. The y-axis goes from 0 to 1, and each step I add a new particle. If each particle moves δ each step, then after, 10 steps, the y positions of the first 10 particles will be:</p>
+
+            <pre><code>y0 -&gt; 1 - 10δ
+y1 -&gt; 1 - 9δ
+y2 -&gt; 1 - 8δ
+...
+</code></pre>
+
+            <p>until it reaches the true <code>y</code> position. If you scribble on some paper, you can convince yourself this is equivalent to something like <code>(np.arange(n) - n) * δ</code>, then taking the maximum of that and the true position.</p>
+
+            <pre><code class="language-python">fig, ax = plt.subplots(figsize=FIGSIZE)
+xdata, ydata = [], []
+ln = ax.scatter([], [], marker='.', animated=True)
+cmap = plt.get_cmap('viridis')
+
+def init():
+    ax.set_xlim(bins.min(), bins.max())
+    ax.set_ylim(0, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    ax.set_xticks([])
+    ax.get_yaxis().set_visible(False)
+    return ln,
+
+def update(idx):
+    xdata.append(bins[idx])
+    ydata.append(counter[idx])
+    colors = cmap(np.linspace(0, 1, len(xdata)))
+    offset = (np.arange(idx + 1) - idx + 49) / 50
+    y = np.maximum(ydata, offset)
+    ln.set_offsets(np.array([xdata, y]).T)
+    ln.set_facecolors(colors)
+    return ln,
+
+anim = FuncAnimation(fig, update, frames=np.arange(bins.shape[0]),
+                     init_func=init, blit=True, interval=20)
+HTML(anim.to_html5_video())
+</code></pre>
+
+            <video controls autoplay loop src="/img/falling.mp4"></video>
+
+        </section>
+
+        <section>
+            <h2 id="6-now-implement-a-tiny-fire-hose-animation">6. Now implement a tiny fire hose animation</h2>
+
+            <p>O&hellip; okay?</p>
+
+            <video controls autoplay loop src="/img/hose.mp4"></video>
+
+        </section>
+
+    </main>
+    <footer>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

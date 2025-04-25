@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>PyMC3 v3.8</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <h1 class="title">Releasing a project on PyPI</h1>
+        <p class="date">10 June, 2017</p>
+    </header>
+    <section>
+        <p>Caveat! This is mostly me cargo-culting what worked for me. The docs
+            suggest using <code>twine</code>, which I couldn’t get to work.</p>
+        <p>I’m assuming you’ve got a nice python package, a working
+            <code>setup.py</code>, and are ready to release version 0.1 of
+            <code>foo</code> on pypi:</p>
+        <ol start="0" type="1">
+            <li>Register at pypi.python.org and login</li>
+            <li>Run <code>python setup.py sdist</code>, to generate the
+                <code>foo.egg-info/</code> directory. Inside should be
+                <code>PKG-INFO</code>.</li>
+            <li>Run <code>python setup.py bdist_wheel</code>, to generate
+                <code>build/</code>, which can be ignored, and <code>dist/</code>.
+                Inside <code>dist/</code> are the python wheel
+                (<code>foo-0.1-py2.py3-none-any.whl</code>) and the source distribution
+                (<code>foo-0.1.tar.gz</code>)</li>
+            <li>Go to the “<a href="https://pypi.python.org/pypi?%3Aaction=submit_form">Package
+                    submission</a>” (caution: link is annoying if you aren’t logged in) and
+                upload <code>PKG-INFO</code>.</li>
+            <li>This will create some pages for you on pypi, like
+                https://pypi.python.org/pypi/foo/0.1, and direct you to a page where you
+                can upload files. Upload the wheel and source distribution and wheel
+                from step 2, and you should be good to go.</li>
+            <li>Create a clean virtual environment and <code>pip install foo</code>
+                to make sure nothing went wrong!</li>
+        </ol>
+        <p>Note that if you make even a tiny change to anything, you’ll need to
+            upload a new release, so probably make sure you’re happy before you
+            start.</p>
+    </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Exercises in automatic differentiation using autograd and JAX</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Exercises in automatic differentiation using autograd and JAX</h1>
+            <p class="date">6 April, 2019</p>
+        </section>
+    </header>
+    <main>
+        <section>
+            <p><em>The notebook that generated this blog post can be found <a href="https://gist.github.com/ColCarroll/01e3056515bcdceffa9e4c0027dcd45f" target="_blank">here</a></em></p>
+
+            <p>This is a short note on how to use an automatic differentiation library, starting from exercises that feel like calculus, and ending with an application to linear regression using very basic gradient descent.</p>
+
+            <p>I am using <a href="https://github.com/HIPS/autograd" target="_blank">autograd</a> here, though these experiments were originally done using <a href="https://github.com/google/jax" target="_blank">jax</a>, which adds <a href="https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/xla/g3doc/overview.md" target="_blank">XLA</a> support, so everything can run on the GPU. It is strikingly easy to move from <code>autograd</code> to <code>jax</code>, but the random number generation is <em>just</em> weird enough that the following is run with autograd. I have included the equivalent <code>jax</code> code for everyting, though</p>
+
+            <p>Automatic differentiation has found intense application in deep learning, but my interest is in probabilistic programming, and gradient-based Markov chain Monte Carlo in particular. There are a number of probabilistic programming libraries built on top of popular deep learning libraries, reaping the benefits of efficient gradients and computation:</p>
+
+            <ul>
+                <li><a href="https://pymc.io/" target="_blank">PyMC3</a> uses <a href="https://github.com/theano/theano" target="_blank">Theano</a>,</li>
+                <li><a href="http://pyro.ai/" target="_blank">Pyro</a> uses <a href="https://pytorch.org/" target="_blank">PyTorch</a>, and</li>
+                <li><a href="https://www.tensorflow.org/probability/api_docs/python/tfp/edward2" target="_blank">Edward2</a> uses <a href="https://www.tensorflow.org/probability/" target="_blank">Tensorflow</a>.</li>
+            </ul>
+
+            <p>The <a href="https://mc-stan.org/" target="_blank">Stan</a> library implements <a href="https://arxiv.org/abs/1509.07164" target="_blank">their own automatic differentiation</a>.</p>
+
+            <p>At their simplest, these libraries both work by taking a function \(f: \mathbb{R}^n \rightarrow \mathbb{R}\) and return the gradient, \(\nabla f: \mathbb{R}^n \rightarrow \mathbb{R}^n\). This can be chained to get second or third derivatives.</p>
+        </section>
+
+        <section>
+            <h2 id="example-1-derivatives-of-a-function">Example 1: Derivatives of a function</h2>
+
+            <p>Here are the first 4 derivatives of the hyperbolic tangent:</p>
+
+            <pre><code class="language-python">import matplotlib.pyplot as plt
+import autograd.numpy as np
+from autograd import elementwise_grad
+
+fig, ax = plt.subplots(figsize=(10, 7))
+
+x = np.linspace(-4, 4, 1000)
+
+my_func = np.tanh
+ax.plot(x, my_func(x))
+for _ in range(4):
+    my_func = elementwise_grad(my_func)
+    ax.plot(x, my_func(x))
+</code></pre>
+
+            <p><img src="/img/autograd_blog_files/autograd_blog_3_0.png" alt="png" /></p>
+
+            <p>Note: the equivalent code in <code>jax</code> is</p>
+
+            <pre><code class="language-python">import jax.numpy as np
+from jax import grad, vmap
+
+fig, ax = plt.subplots(figsize=(10, 7))
+
+x = np.linspace(-4, 4, 1000)
+
+my_func = np.tanh
+ax.plot(x, my_func(x))
+for _ in range(4):
+    my_func = grad(my_func)
+    ax.plot(x, vmap(my_func)(x))
+</code></pre>
+
+            <p>The difference being that we have <code>vmap</code> instead of <code>elementwise_grad</code>, so we take all our gradients, and <em>then</em> map the function across a vector.</p>
+
+        </section>
+
+        <section>
+            <h3 id="example-2-trig-functions">Example 2: Trig functions</h3>
+
+            <p>My <em>favorite</em> way of defining trigonometric functions like sine and cosine are as solutions to the differential equation
+                $$
+                y&rdquo; = -y
+                $$</p>
+
+            <p>We can use <code>autograd</code> to confirm that sine and cosine both satisfy this equality.</p>
+
+            <pre><code class="language-python">fig, ax = plt.subplots(figsize=(10, 7))
+
+x = np.linspace(-2 * np.pi, 2 * np.pi, 1000)
+
+for func in (np.sin, np.cos):
+    second_derivative = elementwise_grad(elementwise_grad(func))
+    ax.plot(x, func(x), 'k-')
+    ax.plot(x, -second_derivative(x), 'w--', lw=2)
+</code></pre>
+
+            <p><img src="/img/autograd_blog_files/autograd_blog_6_0.png" alt="png" /></p>
+
+            <p>Again, the equivalent <code>jax</code> code just maps <code>vmap</code> to <code>elementwise_grad</code>:</p>
+
+            <pre><code class="language-python">fig, ax = plt.subplots(figsize=(10, 7))
+
+x = np.linspace(-2 * np.pi, 2 * np.pi, 1000)
+
+for func in (np.sin, np.cos):
+    second_derivative = vmap(grad(grad(func)))
+    ax.plot(x, func(x), 'k-')
+    ax.plot(x, -second_derivative(x), 'w--', lw=2)
+</code></pre>
+
+        </section>
+
+        <section>
+            <h3 id="example-3-gradient-descent-for-linear-regression">Example 3: Gradient descent for linear regression</h3>
+
+            <p>We can also do linear regression quite cleanly with <code>autograd</code>. Recall that a common loss function for linear regression is squared error: given data \(X\) and targets \(\mathbf{y}\), we seek to find a \(\mathbf{w}\) that minimizes
+                $$
+                \text{Loss}(\mathbf{w}) = |X\mathbf{w} - \mathbf{y}|^2 = \sum_{j=1}^N (\mathbf{x}_j \cdot \mathbf{w} - y_j)^2
+                $$</p>
+
+            <p>One way of doing this is to use gradient descent: initialize a \(\mathbf{w}_0\), and then update</p>
+
+            <p>$$
+                \mathbf{w}_j = \mathbf{w}_{j - 1} + \epsilon \nabla \text{Loss}(\mathbf{w}_{j - 1})
+                $$</p>
+
+            <p>after enough iterations, \(\mathbf{w}_j\) will be close to the optimal set of weights.</p>
+
+            <p>Another way is to <a href="https://en.wikipedia.org/wiki/Moore%E2%80%93Penrose_inverse" target="_blank">just use some linear algebra</a>:</p>
+
+            <p>$$
+                \hat{\mathbf{w}} = (X^TX)^{-1}X^T\mathbf{y}
+                $$</p>
+
+            <p>As an exercise, you can check that if \(X\) is square and invertible, \((X^TX)^{-1}X^T = X^{-1}\).</p>
+
+            <p>Let&rsquo;s convince ourselves that these two approaches are the same. Keep in mind here our goal is to find a \(\hat{\mathbf{w}}\) that minimizes the loss function.</p>
+
+            <pre><code class="language-python">np.random.seed(1)  # reproducible!
+data_points, data_dimension = 100, 10
+
+# Generate X and w, then set y = Xw + ϵ
+X = np.random.randn(data_points, data_dimension)
+true_w = np.random.randn(data_dimension)
+y = X.dot(true_w) + 0.1 * np.random.randn(data_points)
+
+def make_squared_error(X, y):
+    def squared_error(w):
+        return np.sum(np.power(X.dot(w) - y, 2)) / X.shape[0]
+    return squared_error
+
+# Now use autograd!
+grad_loss = grad(make_squared_error(X, y))
+
+# V rough gradient descent routine. don't use this for a real problem.
+w_grad = np.zeros(data_dimension)
+epsilon = 0.1
+iterations = 100
+for _ in range(iterations):
+    w_grad = w_grad - epsilon * grad_loss(w_grad)
+
+# Linear algebra! `np.linalg.pinv` is the Moore-Penrose pseudoinverse: (X^TX)^{-1}X^T.
+w_linalg = np.linalg.pinv(X).dot(y)
+</code></pre>
+
+            <p><img src="/img/autograd_blog_files/autograd_blog_10_0.png" alt="png" /></p>
+
+            <p>Both our answers agree to within one tenth of one percent, which is exciting, but should not be, because we already did some math.</p>
+
+            <p>The <code>jax</code> implementation here requires care in random number generation (and <code>np.linalg.pinv</code> is not yet implemented), so that the GPUs could deal with them. In fact, only the first few lines, and the very last line need to change:</p>
+
+            <pre><code class="language-python">from jax import random
+
+key = random.PRNGKey(1)
+
+data_points, data_dimension = 100, 10
+
+# Generate X and w, then set y = Xw + ϵ
+X = random.normal(key, (data_points, data_dimension))
+
+true_w = random.normal(key, (data_dimension,))
+y = X.dot(true_w) + 0.1 * random.normal(key, (data_points,))
+
+def make_squared_error(X, y):
+    def squared_error(w):
+        return np.sum(np.power(X.dot(w) - y, 2)) / X.shape[0]
+    return squared_error
+
+# Now use autograd!
+grad_loss = grad(make_squared_error(X, y))
+
+# V rough gradient descent routine. don't use this for a real problem.
+w_grad = np.zeros(data_dimension)
+epsilon = 0.1
+iterations = 100
+for _ in range(iterations):
+    w_grad = w_grad - epsilon * grad_loss(w_grad)
+
+# Linear algebra! The Moore-Penrose pseudoinverse: (X^TX)^{-1}X^T.
+w_linalg = np.dot(np.dot(np.linalg.inv(np.dot(X.T, X)), X.T), y)
+</code></pre>
+
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+
+            <p>&copy; 2025 Colin Carroll</p>
+        </div>
+    </footer>
+</body>
+
+</html>

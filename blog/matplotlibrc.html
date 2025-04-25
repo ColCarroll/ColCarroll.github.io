@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="pandoc" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Setting the matplotlib backend</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <h1 class="title">Setting the matplotlib backend</h1>
+        <p class="date">20 May, 2017</p>
+    </header>
+    <main>
+        <section>
+            <p>Running matplotlib on OS X, occasionally there will be a cryptic
+                error about installing as a framework. See <a href="https://matplotlib.org/faq/osx_framework.html">here</a> for a more
+                precise discussion. The fix I typically use, and which is hard to find
+                (on <a href="http://matplotlib.org/users/customizing.html">this</a>
+                page) is to run</p>
+            <div class="sourceCode" id="cb1">
+                <pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>matplotlib.matplotlib_fname()</span></code></pre>
+            </div>
+            <p>then go to the printed file, find the line that says
+                <code>'macosx'</code>, and change it to <code>'Agg'</code>.</p>
+            <p>Or, as a bash command,
+                <code>python -c 'import matplotlib; print(matplotlib.matplotlib_fname())'</code></p>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

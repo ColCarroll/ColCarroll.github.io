@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Why you should not use Metropolis-Hastings</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Why you should not use Metropolis-Hastings</h1>
+            <p class="date">1 January, 2018</p>
+        </section>
+    </header>
+    <main>
+        <section>
+
+            <p>
+                <meta content="/img/bad_trace_files/bad_trace_14_0.png">
+            </p>
+
+            <p>The goal of this post is to scare users away from using Metropolis-Hastings, in favor of the NUTS sampler. I also want to provide a concrete example of a model that fails with a Metropolis sampler.</p>
+
+            <p>I am using the model from a <a href="https://colindcarroll.com/2017/12/07/does-this-convince-you-that-self-driving-cars-are-safe/" target="_blank">previous post</a>. The details are interesting, but not that important, except that this is a hierarchical model. We will also just concentrate on two of the values from the model.</p>
+
+            <p>The takeaway points are:</p>
+
+            <ul>
+                <li>The NUTS sampler generates (effective) samples about 10,000 times as fast as Metropolis</li>
+                <li>What does a bad trace actually look like?</li>
+                <li>How far from 1 can a bad Gelman-Rubin statistic be?</li>
+                <li>It is easy to compare two models</li>
+            </ul>
+
+            <pre><code class="language-python">varnames=('pooled_rate', 'state_rate')
+
+
+with car_model(miles_e6, fatalities) as nuts_model:
+    nuts_trace = pm.sample(10000, njobs=4)
+
+    Auto-assigning NUTS sampler...
+    Initializing NUTS using jitter+adapt_diag...
+    100%|██████████| 10500/10500 [00:39&lt;00:00, 267.26it/s]
+
+
+with car_model(miles_e6, fatalities) as metropolis_model:
+    metropolis_trace = pm.sample(10000, step=pm.Metropolis(), njobs=4)
+
+    100%|██████████| 10500/10500 [00:28&lt;00:00, 372.62it/s]
+
+</code></pre>
+        </section>
+
+        <section>
+            <h1 id="how-fast-did-we-sample">How fast did we sample?</h1>
+
+            <p>On my machine, the NUTS sampler took around 40 seconds to generate 10,000 samples, and the Metropolis sampler took around 30 seconds. But really, we should be looking at the <a href="https://www.johndcook.com/blog/2017/06/27/effective-sample-size-for-mcmc/" target="_blank"><em>effective sample size</em></a>.</p>
+
+            <pre><code class="language-python">pm.effective_n(nuts_trace, varnames=varnames)
+
+    {'pooled_rate': 40000.0,
+     'state_rate': array([ 40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.,  40000.,  40000.,  40000.,  40000.,  40000.,
+             40000.,  40000.])}
+
+
+pm.effective_n(metropolis_trace, varnames=varnames)
+
+    {'pooled_rate': 3.0,
+     'state_rate': array([ 13.,   2.,   6.,   5.,  29.,   8.,   7.,   6.,   2.,  45.,  48.,
+             12.,   6.,  28.,   7.,   2.,   2.,   6.,  17.,   2.,   4.,  17.,
+             10.,  11.,  12.,  13.,   2.,  12.,   2.,   7.,   5.,   4.,  35.,
+             31.,   2.,  21.,   5.,   2.,  25.,   2.,   9.,   2.,  26.,  24.,
+              2.,   2.,   2.,   8.,   2.,  10.,   2.])}
+</code></pre>
+
+            <p>More is better here. We see that every sample from the NUTS was a good sample, but the Metropolis sampler only generated a few effective samples. Intuitively, this is because the Metropolis sampler produces draws that are highly correlated, and does not explore the space as efficiently as the NUTS sampler.</p>
+
+            <p>Most of what follows is morally related to this: <em>any</em> valid MCMC sampler will eventually produce samples according to the pdf, but &ldquo;eventually&rdquo; here is in the true mathematical sense, in that we may need to sample forever. In this example, the Metropolis sampler just did not generate many independent samples, so it is heavily biased towards its starting position.</p>
+
+        </section>
+        <section>
+            <h1 id="checking-the-trace">Checking the trace</h1>
+
+            <p>Now that we have some samples, checking <code>pm.traceplot</code> gives a picture of our histograms on the left, and a timeline of samples drawn on the right. The NUTS trace looks pretty good, and the Metropolis trace looks pretty bad.</p>
+
+            <pre><code class="language-python">pm.traceplot(nuts_trace, varnames=varnames)
+</code></pre>
+
+            <figure>
+
+                <img src="/img/bad_trace_files/bad_trace_12_0.png" alt="NUTS was doing great right from the start (pymc3 tunes for 500 steps): we could have taken only 500 or 1000 samples and still had a pretty good histogram." />
+
+                <span class="marginnote">
+                    NUTS was doing great right from the start (pymc3 tunes for 500 steps): we could have taken only 500 or 1000 samples and still had a pretty good histogram.
+                </span>
+
+            </figure>
+
+            <pre><code class="language-python">pm.traceplot(metropolis_trace, varnames=varnames);
+</code></pre>
+
+            <figure>
+
+                <img src="/img/bad_trace_files/bad_trace_14_0.png" alt="The Metropolis trace.  You can see four different lines, because the four different jobs we ran produced different histograms, which is bad: you would hope that sampling from the same model four times would produce roughly the same results. Not only that, but the pooled rate is around 10x the correct value (0.016, from the NUTS trace).  Also, you can see that the state rates got pretty stuck, and a few eventually dropped down to near 0, but some never did, staying near 1.0 the whole time." />
+
+                <span class="marginnote">
+                    The Metropolis trace. You can see four different lines, because the four different jobs we ran produced different histograms, which is bad: you would hope that sampling from the same model four times would produce roughly the same results. Not only that, but the pooled rate is around 10x the correct value (0.016, from the NUTS trace). Also, you can see that the state rates got pretty stuck, and a few eventually dropped down to near 0, but some never did, staying near 1.0 the whole time.
+                </span>
+
+            </figure>
+
+        </section>
+
+        <section>
+            <h1 id="using-statistical-tests">Using statistical tests</h1>
+
+            <p>In case we are not convinced yet that the NUTS trace did a great job of sampling, while the Metropolis one would give us wildly incorrect results, we can use the <a href="https://docs.pymc.io/api/diagnostics.html#pymc3.diagnostics.gelman_rubin" target="_blank"><em>Gelman Rubin statistic</em></a>, which compares between chain variance with inter chain variance. Intuitively, if each chain looks like each other chain, then it might have been a good draw, so <em>the Gelman-Rubin statistic should be near 1</em>. Here&rsquo;s a bar plot of the state rate for the <code>NUTS</code> trace, and for the <code>Metropolis</code> trace.</p>
+
+            <p>The NUTS plot is, in the words of Abraham Simpson, like &ldquo;<a href="https://www.youtube.com/watch?v=Ls8376jnLtI" target="_blank">a haircut you could set a watch to</a>&rdquo;. The Metropolis trace is, conversely, <a href="https://frinkiac.com/video/S07E08/0LpZ78EEpIYJKElB44OZ2qnvZG4=.gif" target="_blank">an apogee of sculpted sartorium</a>, all over the place, and often nowhere close to 1.</p>
+
+            <pre><code class="language-python">nuts_gr = pm.gelman_rubin(nuts_trace, varnames=varnames)
+metropolis_gr = pm.gelman_rubin(metropolis_trace, varnames=varnames)
+fig, axs = plt.subplots(2, 1)
+axs[0].bar(x=df.State, height=nuts_gr['state_rate']);
+axs[1].bar(x=df.State, height=metropolis_gr['state_rate']);
+#axs[1].set_yscale('log')
+fig.set_size_inches(18.5, 10.5)
+</code></pre>
+
+            <figure>
+
+                <img src="/img/bad_trace_files/bad_trace_18_0.png" alt="The Gelman-Rubin satistic for the state rates on the top (NUTS trace) are all near 1, which is good. On the bottom they are often far from 1, indicating that the Metropolis traces had not yet converged." />
+
+                <span class="marginnote">
+                    The Gelman-Rubin satistic for the state rates on the top (NUTS trace) are all near 1, which is good. On the bottom they are often far from 1, indicating that the Metropolis traces had not yet converged.
+                </span>
+
+            </figure>
+
+            <p>Finally, there is a nice &ldquo;compare&rdquo; function to compare how two models have fit. <a href="https://docs.pymc.io/notebooks/model_comparison.html" target="_blank">This is meant for more subtle work</a> than this, but a lower WAIC is, roughly, better. The first row here is the trace from the NUTS model.</p>
+
+            <pre><code class="language-python">pm.compare([nuts_trace, metropolis_trace], [nuts_model, metropolis_model])
+</code></pre>
+
+            <div>
+                <style scoped>
+                    .dataframe tbody tr th:only-of-type {
+                        vertical-align: middle;
+                    }
+
+                    .dataframe tbody tr th {
+                        vertical-align: top;
+                    }
+
+                    .dataframe thead th {
+                        text-align: right;
+                    }
+                </style>
+                <table border="1" class="dataframe">
+                    <thead>
+                        <tr style="text-align: right;">
+                            <th></th>
+                            <th>WAIC</th>
+                            <th>pWAIC</th>
+                            <th>dWAIC</th>
+                            <th>weight</th>
+                            <th>SE</th>
+                            <th>dSE</th>
+                            <th>warning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>0</th>
+                            <td>498.99</td>
+                            <td>25.5</td>
+                            <td>0</td>
+                            <td>1</td>
+                            <td>12.19</td>
+                            <td>0</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <th>1</th>
+                            <td>3.1742e+09</td>
+                            <td>1.5871e+09</td>
+                            <td>3.1742e+09</td>
+                            <td>0</td>
+                            <td>1.83667e+09</td>
+                            <td>1.83667e+09</td>
+                            <td>1</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

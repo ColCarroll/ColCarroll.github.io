@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Simulation Based Calibration in PyMC3</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Simulation Based Calibration in PyMC3</h1>
+            <p class="date">20 October, 2018</p>
+        </section>
+    </header>
+    <main>
+        <section>
+            <p><img src="/img/fig10.png" alt="png" />
+                I got to see Sean Talts and Michael Betancourt giving very good (and crowded [<a href="https://twitter.com/betanalpha/status/1052632528778084353" target="_blank">1</a>], [<a href="https://twitter.com/betanalpha/status/1053019059023998984" target="_blank">2</a>]) workshops at PyData NYC this past week, and it got me to hacking on a PyMC3 version of the algorithm from <a href="http://arxiv.org/abs/1804.06788" target="_blank">their recent paper</a> (also with Dan Simpson, Aki Vehtari, and Andrew Gelman).</p>
+
+            <p>The paper provides an algorithm, simulation based calibration (SBC), for checking whether an algorithm that produces samples from a posterior (like MCMC, ADVI, or INLA) might work for a given model. This calibration is independent of the observations for a model:</p>
+
+            <ul>
+                <li>we sample parameters <code>θ</code> from the prior, then use those samples to generate draws from the <em>prior predictive</em> distribution.</li>
+                <li>For each draw <code>y</code> from the prior predictive distribution, we calculate, say, 100 draws from our posterior, using <code>y</code> as our observation.</li>
+                <li>If you sort <code>θ</code> into the posterior samples, its position (&ldquo;rank statistic&rdquo;) should be uniformly distributed.</li>
+            </ul>
+
+            <p>Read the paper. It is very nice.</p>
+        </section>
+
+        <section>
+            <h2 id="using-the-library">Using the library</h2>
+
+            <p>You can pip install and use the library right now!</p>
+
+            <pre><code class="language-bash">pip install git+https://github.com/ColCarroll/simulation_based_calibration
+</code></pre>
+
+            <p>See <a href="https://github.com/ColCarroll/simulation_based_calibration" target="_blank">the github project</a> for sample usage.</p>
+        </section>
+    </main>
+    <footer>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

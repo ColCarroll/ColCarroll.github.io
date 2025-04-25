@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Choice of Symplectic Integrator in Hamiltonian Monte Carlo</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Choice of Symplectic Integrator in Hamiltonian Monte Carlo</h1>
+            <p class="date">28 April, 2019</p>
+        </section>
+    </header>
+
+    <main>
+        <section>
+            <p><em>This is the fourth post in a series exploring implementing gradient based samplers in practice. Background is available <a href="../blog/autodiff_exercises.html">on automatic differentiation</a>, <a href="../blog/hmc_from_scratch.html">a basic implementation of Hamiltonian Monte Carlo</a>, and <a href="../blog/step_size_adapt_hmc.html">step size adaptation for MCMC</a>. A well tested, documented library containing all of this code is available <a href="https://github.com/ColCarroll/minimc">here</a>. Pull requests and issues are welcome.</em></p>
+
+            <p>This is a bit of a deep dive into our choice of integrator in Hamiltonian Monte Carlo (HMC). As a spoiler alert, we find that the leapfrog integrator is empirically the fastest, or at least no slower, than other integrators. It is still interesting to consider what choice we have made, and why we have made it.</p>
+
+            <p>Much of the material here is from Janne Mannseth, Tore Selland Kleppe, and Hans J. Skaug in <a href="https://arxiv.org/abs/1608.07048" target="_blank">On the Application of Higher Order Symplectic Integrators in Hamiltonian Monte Carlo</a>, as implemented by <a href="https://github.com/pymc-devs/pymc3/pull/1758" target="_blank">Adrian Seyboldt in PyMC3</a>.</p>
+        </section>
+
+        <section>
+            <h2 id="a-very-brief-reminder-about-hmc">A very brief reminder about HMC</h2>
+
+            <p>Recall that in HMC, we have a probability density function $\pi$ defined on $\mathbb{R}^n$, and wish to generate samples from it. This is the distribution I will use for examples today: it is a mixture of 3 Gaussians:</p>
+
+            <p><img src="/img/integrator_pdf.png" alt="png" /></p>
+
+            <p>To generate samples with HMC, we add an $n$-dimensional momentum variable, then simulate some physics in $\mathbb{R}^{2n}$. The physics goes on in this &ldquo;<code>(position, momentum)</code> space&rdquo;. To get our MCMC samples, we just forget the <code>momentum</code> and keep the <code>position</code>. Here is a picture of some samples in <code>(position, momentum)</code> space:</p>
+
+            <p><img src="/img/integrator_phases.png" alt="png" /></p>
+
+            <p>The end of each trajectory is marked with an <code>x</code>, and the actual samples are marked on the bottom of the plot. You can see the start of the 3 modes forming!</p>
+        </section>
+
+        <section>
+            <h2 id="a-naive-integrator">A naive integrator</h2>
+
+            <p>Let&rsquo;s first implement the most obvious thing, to convince ourselves that we want to improve it. The Hamiltonian equations <a href="https://colindcarroll.com/2019/04/11/hamiltonian-monte-carlo-from-scratch/" target="_blank">simplify to</a>
+                $$
+                \frac{d \mathbf{q}}{dt} = \mathbf{p} \\<br />
+                \frac{d \mathbf{p}}{dt} = - \frac{\partial V}{\partial \mathbf{q}}
+                $$
+                where $V = -\log \pi(\mathbf{q})$.</p>
+
+            <p>Then given</p>
+
+            <ul>
+                <li>an initial position <code>q</code> and initial momentum <code>p</code>,</li>
+                <li>a step size <code>step_size</code>,</li>
+                <li>and a path length <code>path_len</code>,</li>
+            </ul>
+
+            <p>a straightforward approach is</p>
+
+            <pre><code class="language-python">for _ in range(int(path_len / step_size)):
+    p -= step_size * dVdq(q)  # update momentum
+    q += step_size * p  # update position
+</code></pre>
+
+            <p>How does this look graphically in <code>(position, momentum)</code> space?</p>
+
+            <p><img src="/img/integrator_naive_0.2.png" alt="png" /></p>
+
+            <p>The first cell shows the exact path that the integrator is trying to follow: the green triangle is the start, and the red target is where the new proposal should be. The second plot shows each step the integrator makes. It does not do that well! The red &ldquo;X&rdquo; shows where it ended up, which is kind of far from the target. The third plot shows each intermediate step: a full momentum update (vertical move), followed by a full position update (horizontal move). Notice that every other move lies on the trajectory of the integrator.</p>
+
+            <p>In addition to the accuracy, we should keep in mind the computational cost, since this is going to be an inner loop in running MCMC. This algorithm does 1 gradient evaluation per step.</p>
+
+            <p>To do better, we move to a class of integrators with a special volume preserving property.</p>
+
+        </section>
+
+        <section>
+            <h2 id="what-is-a-symplectic-integrator">What is a symplectic integrator?</h2>
+
+            <p>I did not do a deep dive into symplectic integrators, spending most of my time on numerical experiments, so I am a little nervous about this section. <em>Remember to always consult a mathematician before engaging in any symplectic integration.</em></p>
+
+            <p>I will give the somewhat-imprecise definition of a symplectic integrator as one that preserves volume. Specifically, if you take a (infinetessimal) square and apply the integrator to it, the square will maintain the same (infinitessimal) volume. This condition is very similar to <a href="https://en.wikipedia.org/wiki/Detailed_balance" target="_blank">a technical condition</a> that is sufficient to define an MCMC sampler.</p>
+
+            <p><img src="/img/integrator_symplectic.png" alt="png" /></p>
+
+            <p>Remember that this chart - and the symplectic property - is in <code>(position, momentum)</code> space.</p>
+
+            <h2 id="a-first-symplectic-integrator-the-leapfrog-integrator">A first symplectic integrator: the leapfrog integrator</h2>
+
+            <p>As an example (without proof!) of a symplectic integrator, here is the <em>leapfrog integrator</em>. This is the one actually used in HMC in every practical implementation I have seen (<code>Stan</code>, <code>PyMC3</code>, <code>Pyro</code>, <code>TensorFlow Probability</code>, <code>Ranier</code>). See the benchmarks at the end of the article, and also <a href="https://github.com/pymc-devs/pymc3/pull/1758" target="_blank">this thoughtful discussion</a> between the wonderful Adrian Seyboldt and Bob Carpenter on the practical use of higher order integrators, which matches my experience.</p>
+
+            <p><strong>The only difference between a leapfrog integrator and the naive integrator above</strong> is that we start with a half momentum update, then a full position update, then another half update (whence &ldquo;leapfrog&rdquo;):</p>
+
+            <pre><code class="language-python">for _ in np.arange(np.round(path_len / step_size)):
+    p -= step_size * dVdq(q) / 2  # half momentum update
+    q += step_size * p  # whole position update
+    p -= step_size * dVdq(q) / 2  # half momentum update
+</code></pre>
+
+            <p>Note that this costs two gradient evaluations per loop, but a simple change can make it twice as fast by combining the half updates in the loop:</p>
+
+            <pre><code class="language-python">p -= step_size * dVdq(q) / 2  # half momentum update
+for _ in np.arange(np.round(path_len / step_size) - 1):
+    q += step_size * p  # whole position update
+    p -= step_size * dVdq(q)  # whole momentum update
+q += step_size * p  # whole position update
+p -= step_size * dVdq(q) / 2  # half momentum update
+</code></pre>
+
+            <p>Now the cost is the same 1 gradient per step (plus a single extra gradient evaluation, amortized over all the steps). We can look at the performance in the same way as the naive integrator:</p>
+
+            <p><img src="/img/integrator_leapfrog_0.2.png" alt="png" /></p>
+
+            <p>By interleaving the half steps, the leapfrog integrator does better at tracking the true trajectory, with essentially the same cost.</p>
+        </section>
+
+        <section>
+            <h2 id="two-stage-leapfrog">Two-stage leapfrog</h2>
+
+            <p>A two-stage integrator makes 2 leapfrog steps per update. The distance of each update is calculated to keep the symplectic property (this fact should not be clear, but it <em>is</em> important):</p>
+
+            <pre><code class="language-python">for _ in np.arange(np.round(path_len / step_size)):
+    p -= C * step_size * dVdq(q)  # `C` momentum update
+    q += step_size * p / 2  # half position update
+    p -= (1 - 2 * C) * step_size * dVdq(q)  # 1 - 2C position update
+    q += step_size * p / 2  # half position update
+    p -= C * step_size * dVdq(q)  # `a` momentum update
+</code></pre>
+
+            <p>There is a constant <code>C</code> there chosen to maximize the acceptance probability, and the value, $\frac{3 - \sqrt{3}}{6}$, is not important.</p>
+
+            <p><img src="/img/integrator_leapfrog_twostage_0.2.png" alt="png" /></p>
+
+            <p>Note also that we can do the same loop wrapping trick, so this <em>two-stage leapfrog</em> takes 2 gradient evaluations per step. We show in the benchmarks that the added expense almost, but does not quite, pay for itself.</p>
+
+            <h2 id="three-stage-leapfrog">Three-stage leapfrog</h2>
+
+            <p>As a final experiment, we show a symplectic integrator with <em>three</em> leapfrog steps per update. This time there are two constants that are not important, but kind of wild if you are <em>that kind of person</em> at parties ($\frac{12,127,897}{102,017,882}$ and $\frac{4,271,554}{14,421,423}$). We call them <code>C</code> and <code>D</code> below.</p>
+
+            <pre><code class="language-python">for _ in np.arange(np.round(path_len / step_size)):
+    p -= C * step_size * dVdq(q)  # C step
+    q += D * step_size * p  # D step
+    p -= (0.5 - C) * step_size * dVdq(q)  # (0.5 - C) step
+    q += (1 - 2 * D) * step_size * p  # (1 - 2D) step
+    p -= (0.5 - C) * step_size * dVdq(q) # (0.5 - C) step
+    q += D * step_size * p  # D step
+    p -= C * step_size * dVdq(q)  # C step
+</code></pre>
+
+            <p>This will end up costing 3 gradient evaluations per update once we wrap the gradient at the end of the loop.</p>
+
+            <p><img src="/img/integrator_leapfrog_threestage_0.2.png" alt="png" /></p>
+
+            <p>Just for fun, here is also the three-stage integrator with a step size twice as big as above</p>
+
+            <p><img src="/img/integrator_leapfrog_threestage_0.4.png" alt="png" /></p>
+
+            <p>Compare this to all the other integrators, which make bad mistakes with such a large step:</p>
+
+            <p><img src="/img/integrator_naive_0.4.png" alt="png" /></p>
+
+            <p><img src="/img/integrator_leapfrog_0.4.png" alt="png" /></p>
+
+            <p><img src="/img/integrator_leapfrog_twostage_0.4.png" alt="png" /></p>
+
+            <h2 id="which-integrator-to-use">Which integrator to use?</h2>
+
+            <p>Benchmarking MCMC is hard. Three big problems you should have with my method here are:</p>
+
+            <ol>
+                <li>I should test on real data as well as simulated data. But I have not made an API that is good at handling real data yet.</li>
+                <li>I should benchmark <a href="https://mc-stan.org/docs/2_19/reference-manual/effective-sample-size-section.html" target="_blank">effective sample size</a> per second. But I have not implemented parallel sampling yet, and I have things to do with my computer that don&rsquo;t involve simulations for blog posts.</li>
+                <li>I should test on probability densities with more complicated geometry, like hierarchical models. But I have not yet implemented divergence handling, and this goes&hellip; <em>poorly</em>.</li>
+            </ol>
+
+            <p>Given what tools I <em>do</em> have, I put together 6 test distributions, and run the following experiment for each distribution:</p>
+
+            <ol>
+                <li>Fix a path length (this is plausibly similar to producing the same effective sample size)</li>
+                <li><a href="https://colindcarroll.com/2019/04/21/step-size-adaptation-in-hamiltonian-monte-carlo/" target="_blank">Automatically tune step size</a> to get a rate of 0.7</li>
+                <li>Draw 2,000 samples</li>
+                <li>Report the time for <strong>both</strong> the tuning and the sampling</li>
+            </ol>
+
+            <p>The figure displays a little small, but right click to open in a new tab to see better.</p>
+
+            <p><img src="/img/integrator_benchmarks.png" alt="png" /></p>
+
+            <p>From this big experiment, I conclude that the regular leapfrog is perhaps better, or at least comparable with higher-order leapfrog methods. In terms of implementation, it is much simpler, so we might as well use it. Note that the paper claims efficiency gains in NUTS, which is optimized a bit differently from HMC, so I am not contradicting that claim.</p>
+        </section>
+
+    </main>
+    <footer>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_CHTML-full" integrity="sha256-GhM+5JHb6QUzOQPXSJLEWP7R73CbkisjzK5Eyij4U9w=" crossorigin="anonymous" async></script>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

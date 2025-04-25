@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Very Parallel MCMC Sampling</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <h1 class="title">Very Parallel MCMC Sampling</h1>
+        <p class="date">18 August, 2019</p>
+    </header>
+
+
+    <main>
+        <section>
+            <div class="epigraph">
+                <blockquote>
+                    Four chains isn&rsquo;t cool. You know what&rsquo;s cool? A million chains.
+                </blockquote>
+            </div>
+        </section>
+
+        <section>
+            <p>I have been spending a lot of time with <a href="https://www.tensorflow.org/probability" target="_blank">TensorFlow Probability</a> in the last year in working on PyMC4 and generally doing <em>Bayesian things</em>. One feature that I have not seen emphasized - but I find very cool - is that chains are practically free, meaning running hundreds or thousands of chains is about as expensive as running 1 or 4.</p>
+
+        </section>
+
+        <section>
+            <h2 id="what-is-a-chain">What is a chain?</h2>
+
+            <p>A <em>chain</em> <a href="https://stackoverflow.com/questions/49825216/what-is-a-chain-in-pymc3/49836257#49836257" target="_blank">is an independent run of MCMC</a>. Running multiple chains can help diagnose multimodality (as in the linked answer), and allows for <a href="https://avehtari.github.io/rhat_ess/rhat_ess.html" target="_blank">convergence diagnostics</a>.</p>
+
+            <figure>
+
+                <img src="/img/mixture.png" alt="Sampling from a mixture of six Gaussians using four chains looks pretty funny. The left plot is a histogram from each of the four chains, and the right is a timeseries of the 1,000 draws for each of the chains. I say this looks funny because you can see the chains jumping from one mode to the next, so you might conclude that you have not spent enough time in each mode, or even found all of them." />
+
+
+
+                <span class="marginnote">
+                    Sampling from a mixture of six Gaussians using four chains looks pretty funny. The left plot is a histogram from each of the four chains, and the right is a timeseries of the 1,000 draws for each of the chains. I say this looks funny because you can see the chains jumping from one mode to the next, so you might conclude that you have not spent enough time in each mode, or even found all of them.
+                </span>
+
+            </figure>
+
+        </section>
+
+        <section>
+            <h2 id="how-are-chains-usually-implemented">How are chains usually implemented?</h2>
+
+            <p>I have always seen libraries</p>
+
+            <ol>
+                <li>Implement an MCMC sampler, and then</li>
+                <li>Use some sort of multiprocessing library to repeat it multiple times.</li>
+            </ol>
+
+            <p>For example, PyMC3 used to use <a href="https://joblib.readthedocs.io/en/latest/" target="_blank">joblib</a>, and now uses <a href="https://github.com/pymc-devs/pymc3/pull/3011" target="_blank">a custom implementation</a>. So if you have 4 cores, you will run 4 independent chains in about the same amount of time as a single chain, or 100 independent chains in ~25x the amount of time as a single chain.</p>
+
+            <figure>
+
+                <img src="/img/sampling.png" alt="By default, PyMC3 will run one chain for each core available. This used 4 cores to sample 4 chains, and did it in less than a second." />
+
+
+
+                <span class="marginnote">
+                    By default, PyMC3 will run one chain for each core available. This used 4 cores to sample 4 chains, and did it in less than a second.
+                </span>
+
+            </figure>
+
+        </section>
+
+        <section>
+            <h2 id="what-are-we-impressed-by-again">What are we impressed by again?</h2>
+
+            <p>The above is pretty nice, but maybe we can do better. If you write an algorithm for &ldquo;MCMC with multiple chains&rdquo; as a vectorized routine, then instead of running your algorithm for &ldquo;MCMC&rdquo; multiple times, you can run &ldquo;MCMC with multiple chains&rdquo; once. Hopefully the linear algebra you used gives you performance gains, too.</p>
+
+            <p>In a very hand-wavy way, we go from</p>
+
+            <pre><code>usual_version = [run_mcmc(iters) for _ in range(chains)]
+</code></pre>
+
+            <p>to</p>
+
+            <pre><code>vectorized_version = run_mcmc(iters, chains)
+</code></pre>
+
+        </section>
+
+        <section>
+            <h2 id="what-can-we-do-with-thousands-of-chains">What can we do with thousands of chains?</h2>
+
+            <p>I am actually not sure! My impression is that there is low-hanging fruit here, but there are a couple places I have seen or found thousands of chains to be useful.</p>
+
+            <ol>
+                <li>
+                    <p>I have been playing with <a href="http://arxiv.org/abs/1708.03625" target="_blank">unbiased MCMC with couplings</a> recently. What does it mean for MCMC to be unbiased? Recall that MCMC is only <em>asymptotically</em> from the stationary distribution, so if a chain is not initialized properly, the mean will be biased (discarding some burn-in/warmup draws helps). We can see this by plotting the mean of thousands of (finite-length) chains:
+                        <img src="/img/biased_mcmc.png" alt="png" /></p>
+                </li>
+
+                <li>
+                    <p>In the very interesting <a href="http://arxiv.org/abs/1903.03704" target="_blank">NeuTra-Lizing Bad Geometry in Hamiltonian Monte Carlo Using Neural Transport</a>, the authors use thousands of chains in the experiments to report estimates of the algorithm&rsquo;s performance:</p>
+
+                    <div class="epigraph">
+                        <blockquote>
+                            For all HMC experiments we used the corresponding q(θ) as the initial distribution. In all cases, we ran the 16384 chains for 1000 steps to compute the bias and chain diagnostics, and ran with 4096 chains to compute steps/second.
+                        </blockquote>
+                    </div>
+                </li>
+
+                <li>
+                    <p>It seems like there is something useful to be done with <a href="https://colcarroll.github.io/hmc_tuning_talk/" target="_blank">tuning MCMC algorithms</a>. For example, step size adaptation is a one dimensional stochastic optimization problem, and may be able to be &ldquo;solved&rdquo; with grid search: choose a heuristic upper and lower bound on the step size, run a few iterations with step size <code>tf.linspace(lower, upper, num_chains)</code>, and then choose the optimal step size.</p>
+                </li>
+            </ol>
+
+        </section>
+
+        <section>
+            <h2 id="how-can-i-use-thousands-of-chains">How can I use thousands of chains?</h2>
+
+            <p><strong>TensorFlow Probability</strong> Here is <a href="https://gist.github.com/ColCarroll/17c7fb6da0b8e3a32996ffa3c8826d46" target="_blank">a gist</a> showing how to run Hamiltonian Monte Carlo in TensorFlow Probability with 256 chains.</p>
+
+            <p><strong>Numpy</strong> I have included a complete <code>numpy</code> implementation of a Metropolis-Hastings sampler at the end of this post, to give a taste of what it looks like (it is about 20 lines of code).</p>
+
+        </section>
+
+        <section>
+            <h2 id="how-free-is-it">How free is it?</h2>
+
+            <p>In each experiment, I took 1,000 samples from a standard Gaussian using 4 chains, and from 1,024 chains. This means 256 times as many samples.</p>
+
+            <p><strong>TensorFlow Probability</strong> was using Hamiltonian Monte Carlo, and took 18.2 seconds vs 22.4 seconds (1.2x as long). I have done some experiments where this is ~10x faster with XLA compilation.</p>
+
+            <p><strong>Numpy Implementation</strong> is below, and uses Metropolis-Hastings, so we expect it to be faster. It took 17.5ms vs 152ms (8.7x as long).</p>
+
+        </section>
+
+        <section>
+            <h2 id="in-conclusion">In Conclusion</h2>
+
+            <p>Keep an eye out for massive numbers of chains, or for ways to use lots of chains. I think there is some interesting work to do here!</p>
+
+        </section>
+
+        <section>
+            <h2 id="numpy-implementation">Numpy Implementation</h2>
+
+            <pre><code>import numpy as np
+
+def metropolis_hastings_vec(log_prob, proposal_cov, iters, chains, init):
+    &quot;&quot;&quot;Vectorized Metropolis-Hastings.
+
+    Allows pretty ridiculous scaling across chains:
+    Runs 1,000 chains of 1,000 iterations each on a
+    correlated 100D normal in ~5 seconds.
+    &quot;&quot;&quot;
+    proposal_cov = np.atleast_2d(proposal_cov)
+    dim = proposal_cov.shape[0]
+    # Initialize with a single point, or an array of shape (chains, dim)
+    if init.shape == (dim,):
+        init = np.tile(init, (chains, 1))
+
+    samples = np.empty((iters, chains, dim))
+    samples[0] = init
+    current_log_prob = log_prob(init)
+
+    proposals = np.random.multivariate_normal(np.zeros(dim), proposal_cov,
+                                              size=(iters - 1, chains))
+    log_unifs = np.log(np.random.rand(iters - 1, chains))
+    for idx, (sample, log_unif) in enumerate(zip(proposals, log_unifs), 1):
+        proposal = sample + samples[idx - 1]
+        proposal_log_prob = log_prob(proposal)
+        accept = (log_unif &lt; proposal_log_prob - current_log_prob)
+
+        # copy previous row, update accepted indexes
+        samples[idx] = samples[idx - 1]
+        samples[idx][accept] = proposal[accept]
+
+        # update log probability
+        current_log_prob[accept] = proposal_log_prob[accept]
+    return samples
+</code></pre>
+
+            <p>You can use this sampler with, for example,</p>
+
+            <pre><code>import scipy.stats as st
+
+dim = 10
+Σ = 0.1 * np.eye(dim) + 0.9 * np.ones((dim, dim))
+
+# Correlated Gaussian
+log_prob = st.multivariate_normal(np.zeros(dim),  Σ).logpdf
+
+proposal_cov = np.eye(dim)
+iters = 2_000
+chains= 1_024
+init = np.zeros(dim)
+
+samples = metropolis_hastings_vec(log_prob, proposal_cov, iters, chains, init)
+</code></pre>
+
+        </section>
+
+    </main>
+    <footer>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Why you should not use Metropolis-Hastings</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <section>
+            <h1 class="title">Why you should not use Metropolis-Hastings</h1>
+            <p class="date">1 January, 2018</p>
+        </section>
+    </header>
+    <main>
+        <section>
+
+
+            <p>(<em>Note: I am assuming familiarity with <code>virtualenv</code> and <code>conda</code>, and a general agreement that
+                    using them are Good Things. See
+                    <a href="https://www.dabapps.com/blog/introduction-to-pip-and-virtualenv-python/" target="blank_">here</a> and
+                    <a href="https://jakevdp.github.io/blog/2016/08/25/conda-myths-and-misconceptions/" target="blank_">here</a>,
+                    respectively, if you want an introduction, or to be convinced.</em>)</p>
+
+            <p>My <a href="https://mediacloud.org/" target="blank_">new day job</a> is on python 3.5.2,
+                <a href="https://github.com/pymc-devs/pymc3" target="blank_">PyMC3</a> runs on 2.7 and 3.6, and
+                supports both <code>pip</code> and <code>conda</code> installations, and my
+                <a href="https://github.com/ColCarroll?tab=repositories" target="blank_">personal projects</a>
+                are all over the place, but I think I have a great and simple set up for having sane and explicit
+                control of all the versions and dependencies.</p>
+        </section>
+        <section>
+
+            <h2 id="the-short-version">The short version</h2>
+
+            <p>I want to have bash functions for</p>
+
+            <ul>
+                <li><b>n</b>ew <b>v</b>irtualenvs (<code>vn</code>),</li>
+                <li><b>a</b>ctivating <b>v</b>irtualenvs (<code>va</code>),</li>
+                <li><b>d</b>eactivating <b>v</b>irtualenvs (<code>vd</code>), and</li>
+                <li><b>dd</b>eleting <b>v</b>irtualenvs (<code>vdd</code>),</li>
+            </ul>
+
+            <p>along with <a href="https://github.com/pyenv/pyenv" target="blank_"><code>pyenv</code></a> for handling the
+                version of python I am using, and
+                <a href="https://github.com/pyenv/pyenv-virtualenv" target="blank_"><code>pyenv-virtualenv</code></a> because
+                <code>pyenv</code> does not play that well with <code>conda</code>.</p>
+
+            <h2 id="how-to-set-it-up">How to set it up!</h2>
+
+            <pre><code class="language-bash">$ brew install pyenv pyenv-virtualenv
+</code></pre>
+
+            <p>Then add to <code>~/.bashrc</code>:</p>
+
+            <pre><code class="language-bash"># virtualenv aliases
+function virtualenv_name { echo &quot;${PWD##*/}&quot; ; }
+function vn { pyenv virtualenv &quot;$(virtualenv_name)&quot; ; }
+function va { pyenv activate &quot;$(virtualenv_name)&quot; ; }
+alias vd=&quot;pyenv deactivate&quot;
+function vdd { pyenv uninstall &quot;$(virtualenv_name)&quot; ; }
+
+# sets up pyenv and pyenv-virtualenv
+export PYENV_ROOT=/usr/local/var/pyenv
+if which pyenv &gt; /dev/null; then eval &quot;$(pyenv init -)&quot;; fi
+if which pyenv-virtualenv &gt; /dev/null; then eval &quot;$(pyenv virtualenv-init -)&quot;; fi
+</code></pre>
+
+            <p>This allows me to set up a new project with, for example</p>
+
+            <pre><code class="language-bash">$ mkdir my_new_project
+$ cd my_new_project
+$ pyenv local 3.6.3
+$ vn
+Requirement already satisfied: setuptools in /usr/local/var/pyenv/versions/3.6.3/envs/my_new_project/lib/python3.6/site-packages
+Requirement already satisfied: pip in /usr/local/var/pyenv/versions/3.6.3/envs/my_new_project/lib/python3.6/site-packages
+$ va
+$ (my_new_project) pip install whatever
+</code></pre>
+
+            <p>If I had wanted a conda version, I could have used <code>pyenv local anaconda3-4.3.1</code> instead.</p>
+
+            <p>Note that your virtual environment is always the name of the directory you are in, and you cannot
+                have two different virtual environments in the same folder. I usually only develop <code>PyMC3</code> using
+                Python 3, and use travis and experience to make sure it works on Python 2. If something is
+                funky though, I can delete one environment, swap to Python 2.7, and rebuild a fresh one to debug.</p>
+
+            <p>As an aside, pyenv does an incredible job of keeping up with the latest Python releases - the
+                alpha candidate for Python 3.7.0
+                <a href="https://github.com/pyenv/pyenv/commit/f9183b5f8ccaf2c0a5778dfb229c1cc85af85492" target="blank_">was up</a> a day after
+                <a href="https://www.python.org/downloads/release/python-370a1/" target="blank_">it was released</a>.</p>
+
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>
