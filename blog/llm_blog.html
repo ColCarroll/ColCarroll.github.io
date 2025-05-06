@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXBS035HHW"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag('js', new Date());
+
+        gtag('config', 'G-XXBS035HHW');
+    </script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <title>Updating my website with an LLM</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <p class="author">By <a href="../index.html">Colin Carroll</a></p>
+    <header id="title-block-header">
+        <h1 class="title">Updating my website with an LLM</h1>
+        <p class="date">5 May, 2025</p>
+    </header>
+    <section>
+        <p><span class="newthought">It has been about 6 years</span> since I last made a blog post, so I decided to go
+            tidy up my website. I wanted something simple and easy to maintain, that would encourage me to "just
+            write", and I did not want to lose all my old material<label for="sn-old-site"
+                class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-old-site"
+                class="margin-toggle"><span class="sidenote">My first website was <a
+                    href="https://web.archive.org/web/20120628041204/http://colindcarroll.com/" target="_blank">on
+                    wordpress</a> during grad school, and I still hope to rescue that content someday</span>.
+        </p>
+        <p>
+            I had previously used <a href="https://gohugo.io/" target="_blank">Hugo</a>, a static website generator
+            that was hip in 2016. Unfortunately, the theme I had been using seems to have become spammy beyond
+            recognition<label for="sn-spammy" class="margin-toggle sidenote-number"></label><input type="checkbox"
+                id="sn-spammy" class="margin-toggle"><span class="sidenote"><a
+                    href="https://github.com/HugoBlox/hugo-blox-builder" target="_blank">link</a>, but probably don't go
+                there</span>. I recall trying to update my version a few years ago, and finding it... difficult<label
+                for="sn-difficult" class="margin-toggle sidenote-number"></label><input type="checkbox"
+                id="sn-difficult" class="margin-toggle"><span class="sidenote">I believe the
+                advice was to read through the CHANGELOGs one at a time, and I was like 20 versions out of date
+                then</span>: at the time I bisected versions of both the theme and the binary until I could at least
+            build and deploy the site.
+        </p>
+
+        <p>I also no longer liked how the old site looked. Seems like it was time for every software engineer's favorite
+            idea until they actually do it: <em>A TOTAL REWRITE</em>.</p>
+    </section>
+    <section>
+        <h2>Attempt 1: Lektor</h2>
+        <p><span class="newthought">I have been a longtime fan</span> of <a href="https://lucumr.pocoo.org/"
+                target="_blank">Armin Ronacher</a>'s projects, recalled he had released some software for blogs<label
+                for="sn-lektor" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-lektor"
+                class="margin-toggle"><span class="sidenote"><a href="https://www.getlektor.com/"
+                    target="_blank">Lektor</a></span> and figured "simple" might mean just laundering
+            my decisions through someone whose taste I trusted, and who had thought harder about this.</p>
+        <p>At the same time, I was interested in trying out "vibe coding" - my day job is working on reasoning in LLMs,
+            but I have not actually used them that often. So I downloaded <a href="https://windsurf.com/"
+                target="_blank">WindSurf</a>, started a new Lektor project, and gave it a shot.</p>
+        <p><label for="sn-tree" class="margin-toggle"></label><input type="checkbox" id="sn-tree"
+                class="margin-toggle"><span class="marginnote">
+                A partial tree of where I got to with porting my website to lektor:
+                <img src="/img/lektor_tree.png" height="75%">
+            </span>
+        </p>
+        <p>It went ok at first! I chatted with the LLM about my plan, "we" decided to put my old site in the project
+            directory, and it appeared fairly familiar with both Hugo and Lektor formats. The LLM identified a bunch of
+            .md files that I needed to port, and it tried running this all through
+            <code>pandoc</code>. The files I checked consisted of just a title, so I asked the LLM to grab all the
+            metadata (date, author, tags) for me, but it took a long time to do this, and I was manually checking it all
+            anyways. Additionally, I gradually realized that I was just moving from markdown to lektor
+            files, which each have their own adhoc way of storing metadata before converting everything to html.
+        </p>
+        <p>After spending about 90 minutes on this, I decided to start over. </p>
+    </section>
+
+    <section>
+        <h2>Attempt 2: Just ask</h2>
+        <p><span class="newthought">At this point I suspected</span> that I wanted to just have html and css, using a
+            basic theme. This might have been the most useful thing I got from the LLMs: I wroted down my goals for the
+            website, wrote down my current
+            thinking <label for="sn-thinking" class="margin-toggle sidenote-number"></label><input type="checkbox"
+                class="margin-toggle" id="sn-thinking"><span class="sidenote">
+                That is, (1) I should keep trying lektor, (2) maybe there is another static site generator I do not know
+                about, or (3) I should just use html and css
+            </span>
+            and then asked for what to do. I got a reasonable answer with positives and negatives, but really had done
+            the hard thinking myself while posing the correct question. LLM as a therapist, I guess.
+        </p>
+    </section>
+
+    <section>
+        <h2>Attempt 3: Static site</h2>
+        <p><span class="newthought">I gave porting my old site another go</span>, at this point having 4 variously named
+            folders for my website on my computer<label for="sn-names"
+                class="margin-toggle sidenote-number"></label><input type="checkbox" class="margin-toggle"
+                id="sn-names"><span class="sidenote">colinweb, web_home, static_site, website</span> for the project.
+            WindSurf did an ok job of creating html stubs for each one. I ended up still manually inspecting each one
+            for having it look reasonable, and for making sense in the new organization of the website<label
+                for="sn-organize" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-organize"
+                class="margin-toggle"><span class="sidenote">I no longer have a separate space for "Projects", and I now
+                have more published papers. I decided to merge those two to reflect that I consider both a form of
+                knowledge sharing</span>. The vibes were somewhat helpful in editing, but a lot of it was manual
+            anyways. The most helpful was to go in and manually edit some things (mostly LaTeX delimiters, moving from
+            "$" to "\(" and "\)"), and whichever base model I was using would pick up on it pretty quickly letting me
+            tab through the rest of the changes. In the past I might have come up with a regex, but this saved some
+            time.
+        </p>
+    </section>
+
+    <section>
+        <h2>Conclusion</h2>
+        <p><span class="newthought">So did it help?</span> My best guess is that the total project took me about the
+            same amount of time as it would have without "vibes". The most helpful bits were</p>
+        <ol>
+            <li>Chatting about the overall design.</li>
+            <li>Tweaking some css that I couldn't be bothered to care about.</li>
+            <li>Creating some momentum that got me going on this.</li>
+        </ol>
+        <p>
+            That last point actually reminds me of when I started learning <code>vim</code>: it makes me modestly faster
+            at text editing, but mostly I find it is a fun little sidequest to keep my brain interested. I tried to use
+            the LLM to take care of boring stuff, and it was modestly satisfying trying to get it to do that
+            efficiently<label for="sn-vim" class="margin-toggle sidenote-number"></label><input type="checkbox"
+                id="sn-vim" class="margin-toggle"><span class="sidenote">When I want to navigate forward to a certain
+                word in
+                <code>vim</code>, trying to decide on <code>f+$LETTER</code> or <code>$Nw</code> does not really matter,
+                but feels great when you really nail it. #hacker #vimlyfe #xtremewordprocessing</span>. </p>
+    </section>
+
+    </main>
+    <footer>
+        <p>&copy; 2025 Colin Carroll</p>
+    </footer>
+</body>
+
+</html>
